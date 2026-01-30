@@ -9,23 +9,37 @@
   </head>
 
   <body>
-    <div class="home">
-      <h1 id="user">...</h1>
-    </div>
+<header class="header">
+  <img id="avatar" src="img/Avatar.svg" alt="avatar">
+</header>
 
-    <script>
-      const tg = window.Telegram?.WebApp;
+<div class="name">
+  <h1 id="user">...</h1>
+</div>
 
-      if (!tg) {
-        document.getElementById("user").innerText =
-          "Открой это внутри Telegram WebApp 🙂";
-      } else {
-        tg.ready();
-        tg.expand();
+<script>
+  const tg = window.Telegram?.WebApp;
 
-        const firstName = tg.initDataUnsafe?.user?.first_name ?? "друг";
-        document.getElementById("user").innerText = "Привет, " + firstName;
-      }
-    </script>
+  const userEl = document.getElementById("user");
+  const avatarEl = document.getElementById("avatar");
+
+  if (!tg) {
+    userEl.innerText = "Открой это внутри Telegram WebApp 🙂";
+  } else {
+    tg.ready();
+    tg.expand();
+
+    const user = tg.initDataUnsafe?.user;
+
+    const firstName = user?.first_name ?? "друг";
+    userEl.innerText = "Привет, " + firstName;
+
+    const photoUrl = user?.photo_url;
+    if (photoUrl) {
+      avatarEl.src = photoUrl;
+    }
+  }
+</script>
+
   </body>
 </html>
