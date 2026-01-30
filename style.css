@@ -1,30 +1,121 @@
-#user {
-  color: black;
-}
-
-.name {
-  width: 90%;
-  height: 20%;
+body {
+  min-height: 100vh;   
+  margin: 0;
   display: flex;
-  justify-self: center;
-  justify-content: center;
-  border-radius: 50px;
+  flex-direction: column;
 }
 
 .header {
-  width: 50px;
   height: 50px;
   display: flex;
-  background-color: azure;
-  border: 5px solid #0000FF;
-  justify-self: end;
-  justify-content: center;
-  border-radius: 50%;
-  overflow: hidden;
-  box-sizing: border-box;
+  justify-content: space-between;
+  justify-items: center;
+  padding: 8px;
+    background-color: rgb(53, 166, 211);
 }
 
-.header img, .header svg {
+.header h1 {
+  font-size:25px;
+  line-height: 15px;
+}
+#avatar{
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+  overflow: hidden;
+  background-color: rgb(241, 241, 241);
+}
+
+main {
+  flex: 10;                         
+  display: flex;
+  flex-direction: column;
+  justify-content: center;         
+  align-items: center;             
+  background-color: rgb(255, 255, 255);
+  gap: 12px;
+}
+
+.name {
+  width: 50%;
+  display: flex;
+  justify-content: center;
+  border-radius: 10px;
+  background-color: rgb(241, 241, 241);
+}
+
+.footer {
+  flex: 1;
+  padding: 10px;
+  background: rgb(255, 255, 255);
+}
+
+.buttons {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  gap: 0px;
+}
+
+.tab{
   width: 100%;
   height: 100%;
+  border: 0;
+  background: #fff;
+  font-size: x-large;
+  font-weight: 600;
+  color: rgb(53, 166, 211);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tab span{
+  display: inline-block;
+  padding: 0 10px 6px;     /* 10px делает линию короче текста */
+  border-bottom: 3px solid #000;
+}
+
+.poisk {
+  width: 70%;
+  height: 60px;
+  background-color: rgb(53, 166, 211);
+  display: flex;
+  border-radius: 30px;
+  justify-content: space-around;
+  justify-items: center;
+}
+
+input {
+  width: 200px;
+  background: transparent;   /* убирает фон */
+  border: white;               /* убирает рамку */
+  outline: white;              /* убирает обводку при фокусе */
+  font-size: 20px;
+  padding: 8px 12px;   /* воздух внутри */
+}
+
+.settings_bt {
+  background: transparent;
+  width: 50px;
+  height: 50px;
+  border: 0;
+}
+.settings_bt img {
+  width: 50px;
+  height: 50px;
+}
+
+.search_bt {
+  width: 100%;
+  background: transparent;
+  border: 0;
+
+}
+
+.search_bt img {
+  width: 50px;
+  height: 50px;
 }
