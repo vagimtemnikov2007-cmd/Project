@@ -1,19 +1,29 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
   <title>Mini App</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
+
 <body>
-  <h1 id="user"></h1>
+  <h1 id="user">...</h1>
 
   <script>
-    const tg = window.Telegram.WebApp;
-    tg.ready();
+    const tg = window.Telegram?.WebApp;
 
-    document.getElementById("user").innerText =
-      "Привет, " + tg.initDataUnsafe.user.first_name;
+    // Если ты открыл просто в браузере (не из Telegram) — tg будет undefined
+    if (!tg) {
+      document.getElementById("user").innerText = "Открой это внутри Telegram WebApp 🙂";
+    } else {
+      tg.ready();
+      tg.expand();
+
+      const firstName = tg.initDataUnsafe?.user?.first_name ?? "друг";
+      document.getElementById("user").innerText = "Привет, " + firstName;
+    }
   </script>
 </body>
 </html>
