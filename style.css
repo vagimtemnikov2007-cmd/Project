@@ -25,7 +25,9 @@ body {
   object-fit: cover;
   display: block;
   overflow: hidden;
-  background-color: rgb(241, 241, 241);
+  background-color: rgb(241, 241, 241);  
+  box-sizing: border-box;
+  overflow: hidden
 }
 
 main {
@@ -118,4 +120,396 @@ input {
 .search_bt img {
   width: 50px;
   height: 50px;
+}
+
+/* 2 экрана внутри main */
+.screen {
+  display: none;
+  width: 100%;
+  height: 100%;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+}
+
+.screen.active {
+  display: flex;
+}
+
+/* Подчёркивание только у активного таба */
+.tab span {
+  border-bottom: 3px solid transparent; /* по умолчанию нет линии */
+}
+
+.tab.active span {
+  border-bottom-color: #000; /* линия только у выбранного */
+}
+
+/* Блок задач (в твоём стиле, светло-серый) */
+.tasksBox {
+  width: 90%;
+  max-width: 420px;
+  background: rgb(241, 241, 241);
+  border-radius: 14px;
+  padding: 12px;
+}
+
+.tasksHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.tasksHeader h2 {
+  margin: 0;
+}
+
+.clearBtn {
+  background: transparent;
+  border: 0;
+  color: rgb(53, 166, 211);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.tasksList {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0 6px;
+  display: grid;
+  gap: 10px;
+}
+
+.taskItem {
+  background: #fff;
+  border-radius: 12px;
+  padding: 10px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.taskItem.done {
+  opacity: 0.65;
+  text-decoration: line-through;
+}
+
+.tasksHint {
+  margin: 0;
+  opacity: 0.7;
+  font-size: 14px;
+}
+
+/* -------- THEME VARIABLES -------- */
+/* ---- Drawer (left -> right, half screen) ---- */
+.drawerOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.35);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+  z-index: 80;
+}
+
+.drawer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 50vw;           /* половина экрана */
+  max-width: 420px;      /* чтобы не было слишком широко на больших экранах */
+  height: 100vh;
+  background: var(--panel, #fff);
+  transform: translateX(-105%);
+  transition: transform 0.25s ease;
+  z-index: 90;
+  box-shadow: 12px 0 30px rgba(0,0,0,0.25);
+  border-right: 1px solid rgba(0,0,0,0.12);
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
+  gap: 12px;
+}
+
+.drawer.open {
+  transform: translateX(0);
+}
+
+.drawerOverlay.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Header */
+.drawerHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.drawerTitle {
+  margin: 0;
+  font-size: 20px;
+}
+
+.drawerClose {
+  background: transparent;
+  border: 0;
+  font-size: 22px;
+  cursor: pointer;
+}
+
+/* Cards in your style */
+.drawerCard {
+  background: rgb(241, 241, 241);
+  border-radius: 14px;
+  padding: 12px;
+}
+
+.drawerCardGrow {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Theme row */
+.themeRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.themeLabel { font-weight: 700; }
+
+.themeToggle {
+  display: flex;
+  gap: 8px;
+}
+
+.themeBtn {
+  border: 1px solid rgba(0,0,0,0.12);
+  background: transparent;
+  padding: 8px 10px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.themeBtn.active {
+  background: rgb(53, 166, 211);
+  color: #fff;
+  border-color: transparent;
+}
+
+/* History */
+.historyHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.historyHead h3 { margin: 0; }
+
+.historyList {
+  background: #fff;
+  border-radius: 14px;
+  padding: 10px;
+  overflow: auto;
+  flex: 1;
+}
+
+.historyItem {
+  border: 1px solid rgba(0,0,0,0.10);
+  border-radius: 12px;
+  padding: 10px;
+  margin-bottom: 10px;
+  font-size: 15px;
+}
+
+.historyItem:last-child { margin-bottom: 0; }
+
+.historyTime {
+  opacity: 0.65;
+  font-size: 12px;
+  margin-top: 6px;
+}
+
+:root {
+  --accent: rgb(53, 166, 211);
+  --bg: #ffffff;
+  --text: #000000;
+  --card: rgb(241, 241, 241);
+  --panel: #ffffff;
+  --border: rgba(0,0,0,0.12);
+}
+
+body.dark {
+  --bg: #0f0f14;
+  --text: #ffffff;
+  --card: #1a1a27;
+  --panel: #14141c;
+  --border: rgba(255,255,255,0.12);
+}
+
+/* применяем тему к твоим блокам */
+body { background: var(--bg); color: var(--text); }
+main { background-color: var(--bg); }
+.name { background-color: var(--card); }
+.footer { background: var(--bg); }
+.tab { background: var(--bg); color: var(--accent); }
+.header { background-color: var(--accent); }
+
+/* Dark mode (в твоём стиле, но темнее) */
+body.dark .drawer { background: #14141c; border-right-color: rgba(255,255,255,0.12); }
+body.dark .drawerCard { background: #1a1a27; }
+body.dark .historyList { background: #14141c; }
+body.dark .historyItem { border-color: rgba(255,255,255,0.12); }
+body.dark .themeBtn { border-color: rgba(255,255,255,0.18); color: #fff; }
+body.dark .drawerClose, body.dark .drawerTitle { color: #fff; }
+
+
+/* Аватар как кнопка */
+.avatar_bt{
+  background: transparent;
+  border: 0;
+  padding: 0;
+  width: 50px;
+  height: 50px;
+  cursor: pointer;
+}
+
+/* Profile modal overlay */
+.profileOverlay{
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.35);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+  z-index: 95;
+}
+
+.profileOverlay.open{
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Profile modal */
+.profileModal{
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) scale(0.98);
+  width: min(92vw, 460px);
+  max-height: 92vh;
+  background: #fff;
+  border-radius: 18px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  z-index: 100;
+}
+
+body.dark .profileModal{
+  background: #14141c;
+  color: #fff;
+}
+
+.profileModal.open{
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.profileHeader{
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+}
+
+.profileTitle{ margin: 0; font-size: 20px; }
+.profileClose{
+  background: transparent;
+  border: 0;
+  font-size: 22px;
+  cursor: pointer;
+  color: inherit;
+}
+
+/* Avatar half screen */
+.profileAvatarWrap{
+  height: 40vh; /* ~пол экрана на телефоне; можно 50vh если хочешь */
+  background: rgb(53, 166, 211);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.profileAvatarWrap img{
+  width: 75%;
+  max-width: 280px;
+  height: auto;
+  aspect-ratio: 1 / 1;
+  border-radius: 18px;
+  object-fit: cover;
+  background: rgb(241, 241, 241);
+}
+
+.profileCard{
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+}
+
+.field{
+  display: grid;
+  gap: 6px;
+}
+
+.field label{
+  font-weight: 700;
+  font-size: 14px;
+  opacity: 0.85;
+}
+
+.field input,
+.field textarea{
+  width: 100%;
+  border-radius: 14px;
+  border: 0;
+  outline: 0;
+  padding: 10px 12px;
+  background: rgb(241, 241, 241);
+  font-size: 16px;
+}
+
+body.dark .field input,
+body.dark .field textarea{
+  background: #1a1a27;
+  color: #fff;
+}
+
+.field input[readonly]{
+  opacity: 0.75;
+}
+
+.profileSave{
+  width: 100%;
+  padding: 12px;
+  border-radius: 14px;
+  border: 0;
+  background: rgb(53, 166, 211);
+  color: #fff;
+  font-size: 18px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.profileHint{
+  font-size: 13px;
+  opacity: 0.7;
 }

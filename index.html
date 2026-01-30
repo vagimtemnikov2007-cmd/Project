@@ -1,62 +1,132 @@
 <!doctype html>
 <html lang="ru">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="stylesheet" href="style.css" />
-    <title>Mini App</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  </head>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="style.css" />
+  <title>Mini App</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
 
-  <body>
-<header class="header">
-  <button class="settings_bt"><img src="img/settings.svg" alt=""></button>
-  <h1>LSD | AI Time Manager</h1>
+<body>
+  <header class="header">
+    <button class="settings_bt" type="button"><img src="img/settings.svg" alt=""></button>
+    <h1>LSD | AI Time Manager</h1>
+    <button class="avatar_bt" id="openProfile" type="button">
   <img id="avatar" src="img/Avatar.svg" alt="avatar">
-</header>
+</button>
 
-<main>
-<div class="name">
-  <h1 id="user">...</h1>
-</div>
-<div class="poisk">
-  <input type="text">
-  <button class="search_bt"><img src="img/search.svg" alt=""></button>
-</div>
-</main>
+  </header>
 
+  <main>
+    <!-- ЭКРАН 1: ГЛАВНАЯ -->
+    <section class="screen active" id="screen-home">
+      <div class="name">
+        <h1 id="user">...</h1>
+      </div>
 
+      <div class="poisk">
+        <input id="prompt" type="text" placeholder="Спроси LSD..." />
+        <button class="search_bt" id="sendBtn" type="button">
+          <img src="img/search.svg" alt="">
+        </button>
+      </div>
+    </section>
 
-<footer class="footer">
-  <div class="buttons">
-  <button class="tab"><span>главная</span></button>
-  <button class="tab"><span>задачи</span></button>
+    <!-- ЭКРАН 2: ЗАДАЧИ -->
+    <section class="screen" id="screen-tasks">
+      <div class="tasksBox">
+        <div class="tasksHeader">
+          <h2>Задачи</h2>
+          <button class="clearBtn" id="clearTasks" type="button">Очистить</button>
+        </div>
 
+        <ul class="tasksList" id="tasksList"></ul>
+        <p class="tasksHint">Задачи появятся тут после запроса на главной.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="buttons">
+      <button class="tab active" id="tabHome" type="button"><span>главная</span></button>
+      <button class="tab" id="tabTasks" type="button"><span>задачи</span></button>
+    </div>
+  </footer>
+
+  <!-- LEFT DRAWER SETTINGS (вынесен из main) -->
+  <div class="drawerOverlay" id="drawerOverlay"></div>
+
+  <aside class="drawer" id="settingsDrawer" aria-hidden="true">
+    <div class="drawerHeader">
+      <h2 class="drawerTitle">Настройки</h2>
+      <button class="drawerClose" id="drawerClose" type="button">✕</button>
+    </div>
+
+    <div class="drawerCard">
+      <div class="themeRow">
+        <span class="themeLabel">Тема</span>
+        <div class="themeToggle">
+          <button class="themeBtn" id="lightBtn" type="button">Светлая</button>
+          <button class="themeBtn" id="darkBtn" type="button">Тёмная</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="drawerCard drawerCardGrow">
+      <div class="historyHead">
+        <h3>История запросов</h3>
+        <button class="clearBtn" id="clearHistory" type="button">Очистить</button>
+      </div>
+      <div class="historyList" id="historyList"></div>
+    </div>
+  </aside>
+
+  <!-- PROFILE MODAL -->
+<div class="profileOverlay" id="profileOverlay"></div>
+
+<section class="profileModal" id="profileModal" aria-hidden="true">
+  <div class="profileHeader">
+    <h2 class="profileTitle">Профиль</h2>
+    <button class="profileClose" id="closeProfile" type="button">✕</button>
   </div>
-</footer>
-<script>
-  const tg = window.Telegram?.WebApp;
 
-  const userEl = document.getElementById("user");
-  const avatarEl = document.getElementById("avatar");
+  <!-- Avatar half screen -->
+  <div class="profileAvatarWrap">
+    <img id="profileAvatar" src="img/Avatar.svg" alt="avatar">
+  </div>
 
-  if (!tg) {
-    userEl.innerText = "Открой это внутри Telegram WebApp 🙂";
-  } else {
-    tg.ready();
-    tg.expand();
+  <div class="profileCard">
+    <div class="field">
+      <label>Имя</label>
+      <input id="profileName" type="text" readonly>
+    </div>
 
-    const user = tg.initDataUnsafe?.user;
+    <div class="field">
+      <label>Username</label>
+      <input id="profileUsername" type="text" readonly>
+    </div>
 
-    const firstName = user?.first_name ?? "друг";
-    userEl.innerText = "Привет, " + firstName;
+    <div class="field">
+      <label>Возраст (для AI, можно менять)</label>
+      <input id="profileAge" type="number" min="0" max="120" placeholder="Например: 19">
+    </div>
 
-    const photoUrl = user?.photo_url;
-    if (photoUrl) {
-      avatarEl.src = photoUrl;
-    }
-  }
-</script>
+    <div class="field">
+      <label>Псевдоним (для AI)</label>
+      <input id="profileNick" type="text" placeholder="Например: Симпапусик">
+    </div>
 
-  </body>
+    <div class="field">
+      <label>Информация о себе (для AI)</label>
+      <textarea id="profileBio" rows="3" placeholder="Коротко: кто ты, чем занимаешься, какие цели..."></textarea>
+    </div>
+
+    <button class="profileSave" id="saveProfile" type="button">Сохранить</button>
+    <div class="profileHint">Имя/username берутся из Telegram. Возраст/псевдоним/инфо сохраняются на устройстве.</div>
+  </div>
+</section>
+
+  <script src="JavaScript.js"></script>
+</body>
 </html>
