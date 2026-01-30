@@ -1,3 +1,14 @@
 #user {
-  background-color: blue;
+  color: black;
+}
+
+.home{
+  width: 90%;
+  height: 20%;
+  display: flex;
+  justify-self: center;
+  justify-content: center;
+  background-color: rgb(255, 255, 255);
+  border: 10px solid black;
+  border-radius: 50px;
 }

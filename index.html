@@ -9,12 +9,14 @@
 </head>
 
 <body>
-  <h1 id="user">...</h1>
+  <div class="home">
+    <h1 id="user">...</h1>
+  </div>
+  
 
   <script>
     const tg = window.Telegram?.WebApp;
 
-    // Если ты открыл просто в браузере (не из Telegram) — tg будет undefined
     if (!tg) {
       document.getElementById("user").innerText = "Открой это внутри Telegram WebApp 🙂";
     } else {
