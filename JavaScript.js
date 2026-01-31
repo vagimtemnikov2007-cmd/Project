@@ -112,14 +112,19 @@ function addTasksFromAI(list) {
   renderTasks();
 }
 
-const API_BASE = "https://lsd-server-ml3z.onrender.com"; // локально на ПК
+const API_BASE = "https://lsd-server-ml3z.onrender.com";
+
+let isLoading = false;
 
 sendBtn.addEventListener("click", async () => {
+  if (isLoading) return;             // защита
   const text = promptEl.value.trim();
   if (!text) return;
 
-  addToHistory(text);
+  isLoading = true;
+  sendBtn.disabled = true;
 
+  addToHistory(text);
   const profile = JSON.parse(localStorage.getItem("lsd_profile_v1") || "{}");
 
   openAi("Думаю...");
@@ -131,40 +136,48 @@ sendBtn.addEventListener("click", async () => {
       body: JSON.stringify({ text, profile })
     });
 
-    const data = await res.json();
+    // читаем как ТЕКСТ, чтобы увидеть даже HTML/ошибку
+    const raw = await res.text();
+    console.log("API status:", res.status);
+    console.log("API raw:", raw);
 
-    if (!res.ok) {
-      // если сервер вернул ошибку
-      openAi("Ошибка AI: " + (data?.error || "bad response"));
+    let data;
+    try {
+      data = JSON.parse(raw);
+    } catch {
+      openAi("Ошибка: сервер вернул не JSON (см. Console).");
       return;
     }
 
-    // покажем текст
-    openAi(data.text || "Готово!");
+    if (!res.ok) {
+      openAi("Ошибка AI: " + (data?.error || data?.message || "bad response"));
+      return;
+    }
 
-    // ДОБАВИМ задачи сразу (например из первой карточки)
-    // можешь поменять логику на выбор карточки позже
-    if (data.cards?.length) {
-      const firstCardTasks = data.cards[0].tasks?.map(t => t.t).filter(Boolean) || [];
+const txt = (typeof data?.text === "string" ? data.text.trim() : "");
+if (txt) openAi(txt);
+else if (Array.isArray(data?.cards) && data.cards.length) openAi("Я сделал карточки задач ✅");
+else openAi("AI вернул пустой ответ. Попробуй ещё раз через 5–10 сек.");
+
+
+    openAi(data.text);
+
+    // добавим задачи из первой карточки
+    if (Array.isArray(data.cards) && data.cards.length) {
+      const firstCardTasks = (data.cards[0].tasks || []).map(t => t.t).filter(Boolean);
       if (firstCardTasks.length) addTasksFromAI(firstCardTasks);
     }
 
     promptEl.value = "";
   } catch (e) {
+    console.log("FETCH ERROR:", e);
     openAi("Ошибка: не удалось подключиться к серверу.");
-    console.log(e);
+  } finally {
+    isLoading = false;
+    sendBtn.disabled = false;
   }
 });
 
-
-
-// Enter отправляет тоже
-promptEl.addEventListener("keydown", (e) => {
-  if (e.key === "Enter") {
-    e.preventDefault();
-    sendBtn.click();
-  }
-});
 
 // ---------- SETTINGS SHEET ----------
 // ---- Drawer open/close ----
