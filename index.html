@@ -30,6 +30,7 @@
         <button class="search_bt" id="sendBtn" type="button">
           <img src="img/search.svg" alt="">
         </button>
+        <div class="cardsArea" id="cardsArea"></div>
       </div>
     </section>
 
@@ -125,6 +126,16 @@
     <button class="profileSave" id="saveProfile" type="button">Сохранить</button>
     <div class="profileHint">Имя/username берутся из Telegram. Возраст/псевдоним/инфо сохраняются на устройстве.</div>
   </div>
+</section>
+
+<div class="aiOverlay" id="aiOverlay"></div>
+
+<section class="aiModal" id="aiModal" aria-hidden="true">
+  <div class="aiModalHeader">
+    <h2>Ответ LSD</h2>
+    <button id="closeAi" type="button">✕</button>
+  </div>
+  <pre class="aiText" id="aiText"></pre>
 </section>
 
   <script src="JavaScript.js"></script>

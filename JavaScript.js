@@ -112,38 +112,51 @@ function addTasksFromAI(list) {
   renderTasks();
 }
 
-async function fakeAI(text) {
-  // 1) если ввёл через запятую — превратим в задачи
-  const parts = text
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
-  if (parts.length >= 2) return parts;
-
-  // 2) иначе — пример
-  return [
-    "Выбрать 1 главную задачу на сегодня",
-    "25 минут фокуса",
-    "5 минут отдых без телефона",
-  ];
-}
+const API_BASE = "https://lsd-server-ml3z.onrender.com"; // локально на ПК
 
 sendBtn.addEventListener("click", async () => {
   const text = promptEl.value.trim();
   if (!text) return;
 
-  // получаем "ответ AI"
-  const result = await fakeAI(text);
+  addToHistory(text);
 
-  // сохраняем задачи
-  addTasksFromAI(result);
+  const profile = JSON.parse(localStorage.getItem("lsd_profile_v1") || "{}");
 
-  // очищаем ввод
-  promptEl.value = "";
+  openAi("Думаю...");
 
-  // переходим в задачи (по желанию)
-  showScreen("tasks");
+  try {
+    const res = await fetch(`${API_BASE}/api/plan`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text, profile })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      // если сервер вернул ошибку
+      openAi("Ошибка AI: " + (data?.error || "bad response"));
+      return;
+    }
+
+    // покажем текст
+    openAi(data.text || "Готово!");
+
+    // ДОБАВИМ задачи сразу (например из первой карточки)
+    // можешь поменять логику на выбор карточки позже
+    if (data.cards?.length) {
+      const firstCardTasks = data.cards[0].tasks?.map(t => t.t).filter(Boolean) || [];
+      if (firstCardTasks.length) addTasksFromAI(firstCardTasks);
+    }
+
+    promptEl.value = "";
+  } catch (e) {
+    openAi("Ошибка: не удалось подключиться к серверу.");
+    console.log(e);
+  }
 });
+
+
 
 // Enter отправляет тоже
 promptEl.addEventListener("keydown", (e) => {
@@ -339,9 +352,29 @@ saveProfileBtn.addEventListener("click", () => {
   closeProfile();
 });
 
+const aiOverlay = document.getElementById("aiOverlay");
+const aiModal = document.getElementById("aiModal");
+const aiText = document.getElementById("aiText");
+document.getElementById("closeAi").addEventListener("click", closeAi);
+aiOverlay.addEventListener("click", closeAi);
+
+function openAi(text){
+  aiText.textContent = text;
+  aiOverlay.classList.add("open");
+  aiModal.classList.add("open");
+  aiModal.setAttribute("aria-hidden","false");
+}
+function closeAi(){
+  aiOverlay.classList.remove("open");
+  aiModal.classList.remove("open");
+  aiModal.setAttribute("aria-hidden","true");
+}
+
+
 // заполняем при старте и при открытии
 fillProfileUI();
 openProfileBtn.addEventListener("click", fillProfileUI);
 
 // ВАЖНО: вызывай addToHistory(text) там, где отправляешь запрос AI
 window.LSD_addToHistory = addToHistory;
+

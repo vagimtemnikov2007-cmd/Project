@@ -513,3 +513,118 @@ body.dark .field textarea{
   font-size: 13px;
   opacity: 0.7;
 }
+
+.aiOverlay{
+  position:fixed; inset:0;
+  background:rgba(0,0,0,.35);
+  opacity:0; pointer-events:none;
+  transition:.2s;
+  z-index:110;
+}
+.aiOverlay.open{opacity:1; pointer-events:auto;}
+
+.aiModal{
+  position:fixed;
+  left:50%; top:50%;
+  transform:translate(-50%,-50%) scale(.98);
+  width:min(92vw,520px);
+  max-height:85vh;
+  background: var(--panel, #fff);
+  border-radius:18px;
+  opacity:0; pointer-events:none;
+  transition:.2s;
+  z-index:120;
+  overflow:hidden;
+}
+.aiModal.open{opacity:1; pointer-events:auto; transform:translate(-50%,-50%) scale(1);}
+
+.aiModalHeader{
+  display:flex; justify-content:space-between; align-items:center;
+  padding:12px;
+}
+.aiModalHeader button{background:transparent;border:0;font-size:22px;cursor:pointer;color:inherit;}
+
+.aiText{
+  margin:0;
+  padding:12px;
+  white-space:pre-wrap;
+  overflow:auto;
+  max-height:calc(85vh - 52px);
+  background:transparent;
+  font-size:14px;
+}
+
+.cardsArea{
+  width: 90%;
+  max-width: 520px;
+  display: grid;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.cardBox{
+  background: rgb(241, 241, 241);
+  border-radius: 14px;
+  padding: 12px;
+}
+
+.cardTitle{
+  margin: 0 0 8px;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.cardTasks{
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.cardTask{
+  background: #fff;
+  border-radius: 12px;
+  padding: 10px;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+  font-size: 14px;
+}
+
+.taskMeta{
+  opacity: .7;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.cardActions{
+  display:flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.cardBtn{
+  flex: 1;
+  border: 0;
+  border-radius: 12px;
+  padding: 10px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.cardBtn.accept{
+  background: rgb(53, 166, 211);
+  color: #fff;
+}
+
+.cardBtn.reject{
+  background: transparent;
+  border: 2px solid rgba(0,0,0,0.15);
+}
+
+/* Dark mode */
+body.dark .cardBox{ background:#1a1a27; }
+body.dark .cardTask{ background:#14141c; }
+body.dark .cardBtn.reject{ border-color: rgba(255,255,255,0.18); color:#fff; }
