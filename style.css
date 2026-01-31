@@ -403,7 +403,7 @@ body.dark .drawerClose, body.dark .drawerTitle { color: #fff; }
   top: 50%;
   transform: translate(-50%, -50%) scale(0.98);
   width: min(92vw, 460px);
-  max-height: 92vh;
+  max-height: 98vh;
   background: #fff;
   border-radius: 18px;
   overflow: hidden;
@@ -461,12 +461,12 @@ body.dark .profileModal{
 
 .profileCard{
   padding: 12px;
-  display: grid;
+  display: flex;
   gap: 10px;
+  flex-direction: column;
 }
 
 .field{
-  display: grid;
   gap: 6px;
 }
 
