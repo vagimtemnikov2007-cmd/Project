@@ -9,29 +9,36 @@
 </head>
 
 <body>
-  <header class="header">
-    <button class="settings_bt" type="button"><img src="img/settings.svg" alt=""></button>
-    <h1>LSD | AI Time Manager</h1>
-    <button class="avatar_bt" id="openProfile" type="button">
-  <img id="avatar" src="img/Avatar.svg" alt="avatar">
-</button>
+<header class="header">
+  <button class="settings_bt" type="button">
+    <img src="img/settings.svg" alt="">
+  </button>
 
-  </header>
+  <button class="avatar_bt" id="openProfile" type="button">
+    <img id="avatar" src="img/Avatar.svg" alt="avatar">
+  </button>
+
+  <div class="buttons">
+    <button class="tab" id="navBtn" type="button"><span>задачи</span></button>
+  </div>
+</header>
+
 
   <main>
     <!-- ЭКРАН 1: ГЛАВНАЯ -->
     <section class="screen active" id="screen-home">
+      <div class="LSD">
+        <h1>LSD | AI Time Manager</h1>
+      </div>
+
+
       <div class="name">
         <h1 id="user">...</h1>
       </div>
 
-      <div class="poisk">
-        <input id="prompt" type="text" placeholder="Спроси LSD..." />
-        <button class="search_bt" id="sendBtn" type="button">
-          <img src="img/search.svg" alt="">
-        </button>
-        <div class="cardsArea" id="cardsArea"></div>
-      </div>
+      <img src="/img/messenger.png" alt="">
+      <!-- CHAT (появится после первого сообщения) -->
+
     </section>
 
     <!-- ЭКРАН 2: ЗАДАЧИ -->
@@ -46,14 +53,34 @@
         <p class="tasksHint">Задачи появятся тут после запроса на главной.</p>
       </div>
     </section>
+
+    <!-- ЭКРАН 3: ЧАТ -->
+<section class="screen" id="screen-chat">
+  <div class="chatTop">
+    <div class="chatTitle">LSD | AI Time Manager</div>
+  </div>
+
+  <div class="chatMessages" id="chatMessages"></div>
+  <div class="chatTyping" id="chatTyping" hidden>AI печатает…</div>
+</section>
+
   </main>
 
-  <footer class="footer">
-    <div class="buttons">
-      <button class="tab active" id="tabHome" type="button"><span>главная</span></button>
-      <button class="tab" id="tabTasks" type="button"><span>задачи</span></button>
-    </div>
-  </footer>
+<footer class="footer">
+      <button class="plan_bt" id="planBtn" type="button" hidden>
+      Создать план
+    </button>
+  <div class="poisk">
+    <input id="prompt" type="text" placeholder="Спроси LSD..." />
+
+
+
+    <button class="search_bt" id="sendBtn" type="button">
+      <img src="img/search.svg" alt="">
+    </button>
+  </div>
+</footer>
+
 
   <!-- LEFT DRAWER SETTINGS (вынесен из main) -->
   <div class="drawerOverlay" id="drawerOverlay"></div>
@@ -95,17 +122,17 @@
   <!-- Avatar half screen -->
   <div class="profileAvatarWrap">
     <img id="profileAvatar" src="img/Avatar.svg" alt="avatar">
+    <div class="pass">
+      <h2>версия : Бесплатная</h2>
+    <button> Обновить План</button>
+    </div>
+
   </div>
 
   <div class="profileCard">
     <div class="field">
       <label>Имя</label>
       <input id="profileName" type="text" readonly>
-    </div>
-
-    <div class="field">
-      <label>Username</label>
-      <input id="profileUsername" type="text" readonly>
     </div>
 
     <div class="field">
@@ -122,9 +149,6 @@
       <label>Информация о себе (для AI)</label>
       <textarea id="profileBio" rows="3" placeholder="Коротко: кто ты, чем занимаешься, какие цели..."></textarea>
     </div>
-
-    <button class="profileSave" id="saveProfile" type="button">Сохранить</button>
-    <div class="profileHint">Имя/username берутся из Telegram. Возраст/псевдоним/инфо сохраняются на устройстве.</div>
   </div>
 </section>
 
@@ -136,6 +160,19 @@
     <button id="closeAi" type="button">✕</button>
   </div>
   <pre class="aiText" id="aiText"></pre>
+</section>
+
+<div class="planOverlay" id="planOverlay"></div>
+
+<section class="planModal" id="planModal" aria-hidden="true">
+  <div class="planHeader">
+    <h2>План</h2>
+    <button id="closePlan" type="button">✕</button>
+  </div>
+
+  <div class="planContent" id="planContent">
+    <!-- сюда JS вставит карточки -->
+  </div>
 </section>
 
   <script src="JavaScript.js"></script>

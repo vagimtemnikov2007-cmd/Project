@@ -1,18 +1,53 @@
 body {
-  min-height: 100vh;   
+  min-height: 100vh;
   margin: 0;
+  font-family: Arial, sans-serif;
   display: flex;
   flex-direction: column;
+  /* Animated multi-color gradient */
+  background: linear-gradient(
+    270deg,
+    rgba(0, 159, 222, 1) 0%,
+    rgba(224, 78, 237, 1) 25%,
+    rgb(153, 89, 255) 50%,
+    rgba(0, 159, 222, 1) 100%
+  );
+  background-size: 800% 800%;
+  animation: gradientShift 12s ease infinite;
+}
+@keyframes gradientShift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
 }
 
 .header {
+  position: fixed;
+  top: 0;
+  left: 0;
+
+  width: 100%;
   height: 50px;
+
   display: flex;
-  justify-content: space-between;
-  justify-items: center;
+  align-items: center;        /* ⬅️ вместо justify-items */
+  justify-content: flex-start;
+
   padding: 8px;
-    background-color: rgb(53, 166, 211);
+  gap: 10px;
+ 
+  background-color: rgb(53, 166, 211);
+  box-shadow: 0px 5px 10px rgba(0, 0, 0, 0.5);
+
+  z-index: 999;
 }
+
 
 .header h1 {
   font-size:25px;
@@ -25,33 +60,42 @@ body {
   object-fit: cover;
   display: block;
   overflow: hidden;
+   
   background-color: rgb(241, 241, 241);  
   box-sizing: border-box;
   overflow: hidden
+  
+  
 }
 
 main {
-  flex: 10;                         
+  flex: 10;                       
   display: flex;
   flex-direction: column;
   justify-content: center;         
   align-items: center;             
-  background-color: rgb(255, 255, 255);
   gap: 12px;
+  border-bottom-left-radius: 30px;
+  border-bottom-right-radius: 30px;
+  padding-top: 100px;
+}
+
+main img {
+  width: 50%;
 }
 
 .name {
-  width: 50%;
   display: flex;
   justify-content: center;
-  border-radius: 10px;
-  background-color: rgb(241, 241, 241);
+  color:grey;
 }
 
 .footer {
-  flex: 1;
+  flex: 6;
+  display: flex;
+  justify-content: center;
   padding: 10px;
-  background: rgb(255, 255, 255);
+    background-color: transparent;
 }
 
 .buttons {
@@ -59,43 +103,69 @@ main {
   display: flex;
   justify-content: center;
   gap: 0px;
+  background-color: transparent;
 }
 
 .tab{
   width: 100%;
   height: 100%;
   border: 0;
-  background: #fff;
   font-size: x-large;
   font-weight: 600;
-  color: rgb(53, 166, 211);
   display: flex;
   align-items: center;
   justify-content: center;
+  background-color: transparent;
 }
 
 .tab span{
   display: inline-block;
+   color: rgb(255, 255, 255);
+  background-color: transparent;
   padding: 0 10px 6px;     /* 10px делает линию короче текста */
   border-bottom: 3px solid #000;
 }
 
+.LSD {
+  display: flex;
+  padding: 0px;
+  height: auto;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+}
+
+.LSD h1 {
+  background-image: linear-gradient(   270deg,
+    rgba(0, 159, 222, 1) 0%,
+    rgba(224, 78, 237, 1) 25%,
+    rgb(153, 89, 255) 50%,
+    rgba(0, 159, 222, 1) 100%);
+  color: transparent;
+  background-clip: text;
+  -webkit-background-clip: text;
+}
+
+
 .poisk {
-  width: 70%;
+margin-top: 100px;
+  width: 90%;
   height: 60px;
-  background-color: rgb(53, 166, 211);
+
   display: flex;
   border-radius: 30px;
-  justify-content: space-around;
+  justify-content: space-between;
   justify-items: center;
 }
 
 input {
-  width: 200px;
+  flex: 1;
   background: transparent;   /* убирает фон */
-  border: white;               /* убирает рамку */
+  border: 2px solid white;
+  border-radius: 25px;               /* убирает рамку */
   outline: white;              /* убирает обводку при фокусе */
   font-size: 20px;
+    background-color: rgb(0, 183, 255);
   padding: 8px 12px;   /* воздух внутри */
 }
 
@@ -111,9 +181,11 @@ input {
 }
 
 .search_bt {
-  width: 100%;
+  width: 60px;
   background: transparent;
-  border: 0;
+  border: 2px solid white;
+  border-radius: 25px;
+  background-color: rgb(0, 183, 255);
 
 }
 
@@ -215,11 +287,11 @@ input {
 
 .drawer {
   position: fixed;
-  top: 0;
+  top: 7vh;
   left: 0;
   width: 50vw;           /* половина экрана */
   max-width: 420px;      /* чтобы не было слишком широко на больших экранах */
-  height: 100vh;
+  height: 95vh;
   background: var(--panel, #fff);
   transform: translateX(-105%);
   transition: transform 0.25s ease;
@@ -354,11 +426,8 @@ body.dark {
 }
 
 /* применяем тему к твоим блокам */
-body { background: var(--bg); color: var(--text); }
 main { background-color: var(--bg); }
-.name { background-color: var(--card); }
-.footer { background: var(--bg); }
-.tab { background: var(--bg); color: var(--accent); }
+.tab {   background-color: transparent; }
 .header { background-color: var(--accent); }
 
 /* Dark mode (в твоём стиле, но темнее) */
@@ -401,9 +470,9 @@ body.dark .drawerClose, body.dark .drawerTitle { color: #fff; }
   position: fixed;
   left: 50%;
   top: 50%;
-  transform: translate(-50%, -50%) scale(0.98);
-  width: min(92vw, 460px);
-  max-height: 98vh;
+  transform: translate(-50%, 50%) scale(0.98);
+  width: min(100vw, 460px);
+  max-height: 60vh;
   background: #fff;
   border-radius: 18px;
   overflow: hidden;
@@ -421,7 +490,7 @@ body.dark .profileModal{
 .profileModal.open{
   opacity: 1;
   pointer-events: auto;
-  transform: translate(-50%, -50%) scale(1);
+  transform: translate(-50%, -15%) scale(1);
 }
 
 .profileHeader{
@@ -442,16 +511,17 @@ body.dark .profileModal{
 
 /* Avatar half screen */
 .profileAvatarWrap{
-  height: 40vh; /* ~пол экрана на телефоне; можно 50vh если хочешь */
-  background: rgb(53, 166, 211);
+  background: rgb(0, 195, 255);
   display: flex;
+  gap: 10px;
+  padding: 5px;
   align-items: center;
-  justify-content: center;
+  justify-content: start;
 }
 
 .profileAvatarWrap img{
   width: 75%;
-  max-width: 280px;
+  max-width: 100px;
   height: auto;
   aspect-ratio: 1 / 1;
   border-radius: 18px;
@@ -468,6 +538,7 @@ body.dark .profileModal{
 
 .field{
   gap: 6px;
+  width: 95%;
 }
 
 .field label{
@@ -624,7 +695,290 @@ body.dark .field textarea{
   border: 2px solid rgba(0,0,0,0.15);
 }
 
-/* Dark mode */
+/* overlays НЕ должны ловить клики, пока закрыты */
+.drawerOverlay,
+.profileOverlay,
+.aiOverlay {
+  pointer-events: none;
+}
+
+/* ловят клики ТОЛЬКО когда open */
+.drawerOverlay.open,
+.profileOverlay.open,
+.aiOverlay.open {
+  pointer-events: auto;
+}
+
+/* ===== CHAT PANE (Telegram-like) ===== */
+.chatPane{
+  display: none;              /* включим только в chat-mode */
+  width: 92%;
+  max-width: 520px;
+  height: calc(100vh - 50px - 86px); /* header 50px + footer ~86px */
+  background: rgba(255,255,255,0.10);
+  border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 18px;
+  overflow: hidden;
+}
+
+.chatMessages{
+  height: 100%;
+  overflow-y: auto;
+  padding: 14px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.chatTyping{
+  padding: 10px 14px;
+  font-size: 13px;
+  color: rgba(247, 1, 1, 0.75);
+}
+
+/* bubble */
+.msg{
+  max-width: 80%;
+  padding: 10px 12px;
+  border-radius: 16px;
+  color: #000000;
+  font-size: 15px;
+  line-height: 1.25;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.msg.user{
+  align-self: flex-end;
+  border-bottom-right-radius: 6px;
+  background: rgba(0,0,0,0.28);
+}
+
+.msg.ai{
+  align-self: flex-start;
+  border-bottom-left-radius: 6px;
+  background: rgba(0, 0, 0, 0.18);
+}
+
+/* ===== FOOTER как у Telegram (всегда снизу) ===== */
+
+
+/* ====== NORMAL MODE (как было) ====== */
+/* твой .poisk margin-top:100px пусть остаётся как сейчас */
+
+/* чат по умолчанию скрыт и НЕ влияет */
+#chatPane { display: none; }
+
+/* ===== CHAT SCREEN (отдельный экран) ===== */
+#screen-chat{
+  width: 100%;
+  height: 100%;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0 0;
+  box-sizing: border-box;
+}
+
+/* верхняя строка в чате */
+.chatTop{
+  width: 92%;
+  max-width: 520px;
+  display: flex;
+  justify-content: center;
+}
+
+.chatTitle{
+  font-weight: 800;
+  font-size: 16px;
+  color: rgba(255,255,255,0.95);
+  padding: 8px 14px;
+  border-radius: 14px;
+  background: rgba(0,0,0,0.12); /* легкая прозрачная плашка, можно убрать */
+  backdrop-filter: blur(6px);
+}
+
+/* поле сообщений — ПРОЗРАЧНОЕ */
+.chatMessages{
+  width: 92%;
+  max-width: 520px;
+  height: calc(100vh - 50px - 86px - 56px); 
+  /* header 50 + footer ~86 + chatTop ~56 */
+  overflow-y: auto;
+  padding: 12px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  background: transparent;    /* ✅ чат без фона */
+  border: none;               /* ✅ без рамок */
+}
+
+/* "AI печатает" */
+.chatTyping{
+  width: 92%;
+  max-width: 520px;
+  font-size: 13px;
+  color: rgba(255,255,255,0.75);
+  padding: 0 12px 8px;
+  box-sizing: border-box;
+}
+
+/* bubbles */
+.msg{
+  max-width: 80%;
+  padding: 10px 12px;
+  border-radius: 16px;
+  color: #fff;                /* белый текст */
+  font-size: 15px;
+  line-height: 1.25;
+  white-space: pre-wrap;
+  word-break: break-word;
+  backdrop-filter: blur(6px);
+}
+
+.msg.user{
+  align-self: flex-end;
+  border-bottom-right-radius: 6px;
+  background: rgba(0,0,0,0.28);
+}
+
+.msg.ai{
+  align-self: flex-start;
+  border-bottom-left-radius: 6px;
+  background: rgba(0, 0, 0, 0.25);
+}
+
+/* ===== FOOTER внизу только в чат-режиме ===== */
+/* по умолчанию оставляем твою верстку (как была) */
+body.chat-mode .footer{
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  padding: 10px;
+  z-index: 60;
+}
+
+/* в чате поле ввода без margin-top:100px */
+body.chat-mode .poisk{
+  margin-top: 0;
+  width: 92%;
+  max-width: 520px;
+  height: 56px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* чтобы main не прятался под footer */
+body.chat-mode main{
+  padding-bottom: 86px;
+  box-sizing: border-box;
+  background: transparent;    /* ✅ чат без фона */
+  border: none;               /* ✅ без рамок */
+}
+.historyChat{
+  cursor: pointer;
+  transition: transform .12s ease, opacity .12s ease;
+}
+.historyChat:active{
+  transform: scale(0.99);
+  opacity: .9;
+}
+
+.historyDelBtn{
+  border: 0;
+  background: transparent;
+  font-size: 18px;
+  font-weight: 900;
+  cursor: pointer;
+  color: rgba(0,0,0,0.55);
+}
+body.dark .historyDelBtn{
+  color: rgba(255,255,255,0.65);
+}
+
+/* Кнопка "Создать план" */
+.plan_bt{
+  border: 2px solid rgba(255,255,255,0.8);
+  background: rgba(0,0,0,0.12);
+  color: #fff;
+  font-weight: 900;
+  border-radius: 25px;
+  padding: 0 14px;
+  height: 56px;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+  transition: transform .12s ease, opacity .12s ease;
+}
+.plan_bt:active{ transform: scale(0.98); opacity: .9; }
+.plan_bt[disabled]{ opacity: .6; cursor: default; }
+
+/* Оверлей плана */
+.planOverlay{
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.40);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s ease;
+  z-index: 140;
+}
+.planOverlay.open{ opacity: 1; pointer-events: auto; }
+
+/* Окно плана */
+.planModal{
+  position: fixed;
+  left: 50%;
+  top: 55%;
+  transform: translate(-50%, -50%) scale(0.98);
+  width: min(92vw, 560px);
+  max-height: 85vh;
+  background: rgba(255,255,255,0.92);
+  border-radius: 18px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s ease, transform .2s ease;
+  z-index: 150;
+  backdrop-filter: blur(10px);
+}
+
+body.dark .planModal{
+  background: rgba(20,20,28,0.92);
+  color: #fff;
+}
+
+.planModal.open{
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.planHeader{
+  display:flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 12px;
+}
+.planHeader h2{ margin:0; font-size: 20px; }
+.planHeader button{
+  border:0;
+  background: transparent;
+  font-size: 22px;
+  cursor: pointer;
+  color: inherit;
+}
+
+.planContent{
+  padding: 12px;
+  overflow: auto;
+  max-height: calc(85vh - 52px);
+  display: grid;
+  gap: 12px;
+}
+
+/* карточки уже у тебя есть (cardBox/cardBtn...), можно использовать их */
 body.dark .cardBox{ background:#1a1a27; }
 body.dark .cardTask{ background:#14141c; }
 body.dark .cardBtn.reject{ border-color: rgba(255,255,255,0.18); color:#fff; }
