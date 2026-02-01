@@ -1,13 +1,5 @@
-// JavaScript.js (полная чистая версия: чаты + план из всей переписки + темы/профиль/таски/дровер)
-// ВАЖНО: в HTML должны быть id:
-// navBtn, screen-home, screen-tasks, screen-chat,
-// prompt, sendBtn, chatMessages, chatTyping,
-// tasksList, clearTasks,
-// settingsDrawer, drawerOverlay, drawerClose, lightBtn, darkBtn,
-// historyList, clearHistory,
-// openProfile, profileModal, profileOverlay, closeProfile,
-// avatar, user, profileAvatar, profileName, profileAge, profileNick, profileBio,
-// planBtn, planOverlay, planModal, planContent, closePlan
+// JavaScript.js — FULL WORKING VERSION (chat -> plan button -> cards)
+// Без дублей, только одна система чатов.
 
 window.addEventListener("DOMContentLoaded", () => {
   // =========================
@@ -15,17 +7,16 @@ window.addEventListener("DOMContentLoaded", () => {
   // =========================
   const $ = (id) => document.getElementById(id);
 
-  const safeOn = (el, event, handler) => {
+  function safeOn(el, event, handler) {
     if (el) el.addEventListener(event, handler);
-  };
+  }
 
-  const escapeHtml = (str) =>
-    String(str ?? "")
+  function escapeHtml(str) {
+    return String(str)
       .replaceAll("&", "&amp;")
       .replaceAll("<", "&lt;")
       .replaceAll(">", "&gt;");
-
-  const clampNum = (n, a, b) => Math.max(a, Math.min(b, n));
+  }
 
   // =========================
   // ELEMENTS
@@ -40,11 +31,14 @@ window.addEventListener("DOMContentLoaded", () => {
   const promptEl = $("prompt");
   const sendBtn = $("sendBtn");
 
-  const chatMessages = $("chatMessages");
-  const chatTyping = $("chatTyping");
-
   const tasksListEl = $("tasksList");
   const clearTasksBtn = $("clearTasks");
+
+  const planBtn = $("planBtn");
+  const planOverlay = $("planOverlay");
+  const planModal = $("planModal");
+  const planContent = $("planContent");
+  const closePlanBtn = $("closePlan");
 
   const settingsBtn = document.querySelector(".settings_bt");
   const drawer = $("settingsDrawer");
@@ -54,7 +48,6 @@ window.addEventListener("DOMContentLoaded", () => {
   const lightBtn = $("lightBtn");
   const darkBtn = $("darkBtn");
 
-  // В drawer это список ЧАТОВ
   const historyListEl = $("historyList");
   const clearHistoryBtn = $("clearHistory");
 
@@ -72,16 +65,8 @@ window.addEventListener("DOMContentLoaded", () => {
   const profileNickEl = $("profileNick");
   const profileBioEl = $("profileBio");
 
-  const planBtn = $("planBtn");
-  const planOverlay = $("planOverlay");
-  const planModal = $("planModal");
-  const planContent = $("planContent");
-  const closePlanBtn = $("closePlan");
-
-  // =========================
-  // CONFIG
-  // =========================
-  const API_BASE = "https://lsd-server-ml3z.onrender.com";
+  const chatMessages = $("chatMessages");
+  const chatTyping = $("chatTyping");
 
   // =========================
   // STATE
@@ -92,32 +77,25 @@ window.addEventListener("DOMContentLoaded", () => {
   // =========================
   // STORAGE KEYS
   // =========================
-  const STORAGE_TASKS = "lsd_tasks_v2";
-  const STORAGE_THEME = "lsd_theme_v2";
-  const STORAGE_PROFILE = "lsd_profile_v2";
+  const STORAGE_TASKS = "lsd_tasks_v1";
+  const STORAGE_THEME = "lsd_theme";
+  const STORAGE_PROFILE = "lsd_profile_v1";
 
-  // Чаты: [{id,title,createdAt,updatedAt,messages:[{who,text,ts}]}]
-  const STORAGE_CHATS = "lsd_chats_v2";
-  const STORAGE_ACTIVE_CHAT = "lsd_active_chat_v2";
+  // Чаты-сессии
+  const STORAGE_CHATS = "lsd_chats_v1";          // [{id,title,createdAt,updatedAt,messages:[{who,text,ts}]}]
+  const STORAGE_ACTIVE_CHAT = "lsd_active_chat"; // id текущего
 
   // =========================
-  // SCREEN SWITCH (анимации через CSS .screen.leaving)
+  // API
+  // =========================
+  const API_BASE = "https://lsd-server-ml3z.onrender.com";
+
+  // =========================
+  // SCREEN SWITCH (smooth)
   // =========================
   function scrollChatToBottom() {
     if (!chatMessages) return;
     chatMessages.scrollTop = chatMessages.scrollHeight;
-  }
-
-  function setNavLabel() {
-    if (!navBtnText || !navBtn) return;
-
-    if (currentScreen === "home") {
-      navBtnText.textContent = "задачи";
-      navBtn.classList.remove("active");
-    } else {
-      navBtnText.textContent = "назад";
-      navBtn.classList.add("active");
-    }
   }
 
   function switchScreen(nextName) {
@@ -129,20 +107,36 @@ window.addEventListener("DOMContentLoaded", () => {
       nextName === "tasks" ? screenTasks :
       screenChat;
 
-    if (!nextEl || currentEl === nextEl) return;
+    if (!nextEl) return;
+    if (currentEl === nextEl) return;
 
     if (currentEl) currentEl.classList.add("leaving");
 
     setTimeout(() => {
       all.forEach((s) => s.classList.remove("active", "leaving"));
       nextEl.classList.add("active");
+
       currentScreen = nextName;
-
       document.body.classList.toggle("chat-mode", nextName === "chat");
-      setNavLabel();
 
+      setNavLabel();
       if (nextName === "chat") scrollChatToBottom();
     }, 220);
+  }
+
+  // =========================
+  // NAV LABEL
+  // =========================
+  function setNavLabel() {
+    if (!navBtn || !navBtnText) return;
+
+    if (currentScreen === "home") {
+      navBtnText.textContent = "задачи";
+      navBtn.classList.remove("active");
+    } else {
+      navBtnText.textContent = "назад";
+      navBtn.classList.add("active");
+    }
   }
 
   safeOn(navBtn, "click", () => {
@@ -150,11 +144,11 @@ window.addEventListener("DOMContentLoaded", () => {
     else switchScreen("home");
   });
 
-  // стартовый экран
+  // старт
   document.body.classList.remove("chat-mode");
-  screenHome?.classList.add("active");
-  screenTasks?.classList.remove("active");
-  screenChat?.classList.remove("active");
+  if (screenHome) screenHome.classList.add("active");
+  if (screenTasks) screenTasks.classList.remove("active");
+  if (screenChat) screenChat.classList.remove("active");
   setNavLabel();
 
   // =========================
@@ -210,13 +204,8 @@ window.addEventListener("DOMContentLoaded", () => {
     localStorage.setItem(STORAGE_PROFILE, JSON.stringify(data));
   }
 
-  const tg = window.Telegram?.WebApp;
-  if (tg) {
-    tg.ready();
-    tg.expand();
-  }
-
   function fillProfileUI() {
+    const tg = window.Telegram?.WebApp;
     const u = tg?.initDataUnsafe?.user;
 
     const nameFromTG = u
@@ -236,11 +225,10 @@ window.addEventListener("DOMContentLoaded", () => {
 
   function persistProfileFromUI() {
     const ageRaw = (profileAgeEl?.value || "").trim();
-    const age =
-      ageRaw === "" ? null : clampNum(Number(ageRaw || 0), 0, 120);
+    const age = ageRaw === "" ? null : Math.max(0, Math.min(120, Number(ageRaw)));
 
     const data = {
-      age: Number.isFinite(age) ? age : null,
+      age,
       nick: (profileNickEl?.value || "").trim(),
       bio: (profileBioEl?.value || "").trim(),
       updatedAt: Date.now()
@@ -271,16 +259,17 @@ window.addEventListener("DOMContentLoaded", () => {
   safeOn(closeProfileBtn, "click", closeProfile);
   safeOn(profileOverlay, "click", closeProfile);
 
-  // Имя/аватар в header
-  if (!tg) {
-    if (userEl) userEl.innerText = "Открой это внутри Telegram WebApp 🙂";
-  } else {
+  // Telegram user name + avatar on main
+  const tg = window.Telegram?.WebApp;
+  if (tg) {
+    tg.ready();
+    tg.expand();
     const u = tg.initDataUnsafe?.user;
     const firstName = u?.first_name ?? "друг";
     if (userEl) userEl.innerText = "Привет, " + firstName;
-
-    const photoUrl = u?.photo_url;
-    if (photoUrl && avatarEl) avatarEl.src = photoUrl;
+    if (u?.photo_url && avatarEl) avatarEl.src = u.photo_url;
+  } else {
+    if (userEl) userEl.innerText = "Открой это внутри Telegram WebApp 🙂";
   }
 
   // =========================
@@ -325,16 +314,11 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 
   function addTasksFromAI(list) {
-    const newOnes = (list || [])
-      .map((title) => String(title || "").trim())
-      .filter(Boolean)
-      .map((title) => ({
-        id: crypto.randomUUID(),
-        title,
-        done: false
-      }));
-
-    if (!newOnes.length) return;
+    const newOnes = list.map((title) => ({
+      id: crypto.randomUUID(),
+      title,
+      done: false,
+    }));
 
     tasks.unshift(...newOnes);
     saveTasks();
@@ -350,10 +334,10 @@ window.addEventListener("DOMContentLoaded", () => {
   renderTasks();
 
   // =========================
-  // CHATS (SESSIONS) + DRAWER LIST
+  // CHATS (SESSIONS)
   // =========================
   let chats = loadChats();
-  let activeChatId = loadActiveChatId();
+  let activeChatId = loadActiveChat();
   let activeMessages = [];
 
   function loadChats() {
@@ -365,11 +349,11 @@ window.addEventListener("DOMContentLoaded", () => {
     localStorage.setItem(STORAGE_CHATS, JSON.stringify(chats));
   }
 
-  function loadActiveChatId() {
+  function loadActiveChat() {
     return localStorage.getItem(STORAGE_ACTIVE_CHAT) || "";
   }
 
-  function setActiveChatId(id) {
+  function setActiveChat(id) {
     activeChatId = id;
     localStorage.setItem(STORAGE_ACTIVE_CHAT, id);
   }
@@ -384,10 +368,11 @@ window.addEventListener("DOMContentLoaded", () => {
     return t.length > 32 ? t.slice(0, 32) + "…" : t;
   }
 
-  // ВАЖНО: логика "новый чат с главной"
+  // Создать новый чат (ВСЕГДА новый)
   function startNewChat(firstUserText) {
     const id = crypto.randomUUID();
     const now = Date.now();
+
     const chat = {
       id,
       title: makeTitle(firstUserText),
@@ -398,20 +383,17 @@ window.addEventListener("DOMContentLoaded", () => {
 
     chats.unshift(chat);
     saveChats();
-    setActiveChatId(id);
+    setActiveChat(id);
 
     activeMessages = chat.messages;
     renderChatMessages();
     renderChatsList();
-
-    // кнопка плана должна быть скрыта в новом чате, пока не будет ответа
-    if (planBtn) planBtn.hidden = true;
+    updatePlanButtonVisibility();
   }
 
+  // Создать чат только если активного нет/удалён
   function ensureActiveChat(firstUserText) {
     if (activeChatId && getChatById(activeChatId)) return;
-
-    // если почему-то активного нет — создаём
     startNewChat(firstUserText);
   }
 
@@ -422,8 +404,9 @@ window.addEventListener("DOMContentLoaded", () => {
     chat.messages.push({ who, text, ts: Date.now() });
     chat.updatedAt = Date.now();
 
-    if (!chat.title || chat.title === "Чат") {
-      if (who === "user") chat.title = makeTitle(text);
+    // если title дефолтный — берём по первому user-сообщению
+    if ((!chat.title || chat.title === "Чат") && who === "user") {
+      chat.title = makeTitle(text);
     }
 
     saveChats();
@@ -431,6 +414,7 @@ window.addEventListener("DOMContentLoaded", () => {
     activeMessages = chat.messages;
     renderChatMessages();
     renderChatsList();
+    updatePlanButtonVisibility();
   }
 
   function renderChatMessages() {
@@ -449,7 +433,6 @@ window.addEventListener("DOMContentLoaded", () => {
 
   function renderChatsList() {
     if (!historyListEl) return;
-
     historyListEl.innerHTML = "";
 
     if (!chats.length) {
@@ -472,6 +455,7 @@ window.addEventListener("DOMContentLoaded", () => {
             </div>
             <div class="historyTime">${time}</div>
           </div>
+
           <button class="historyDelBtn" type="button" data-del="${c.id}" title="Удалить">✕</button>
         </div>
       `;
@@ -486,15 +470,13 @@ window.addEventListener("DOMContentLoaded", () => {
         const chat = getChatById(id);
         if (!chat) return;
 
-        setActiveChatId(id);
+        setActiveChat(id);
         activeMessages = chat.messages || [];
         renderChatMessages();
 
         closeDrawerFn();
         switchScreen("chat");
-
-        // если чат уже имеет хотя бы 2 сообщения — показываем кнопку плана
-        if (planBtn) planBtn.hidden = !(activeMessages.length >= 2);
+        updatePlanButtonVisibility();
       });
     });
 
@@ -507,14 +489,14 @@ window.addEventListener("DOMContentLoaded", () => {
         chats = chats.filter((c) => c.id !== id);
 
         if (activeChatId === id) {
-          setActiveChatId("");
+          setActiveChat("");
           activeMessages = [];
           renderChatMessages();
-          if (planBtn) planBtn.hidden = true;
         }
 
         saveChats();
         renderChatsList();
+        updatePlanButtonVisibility();
       });
     });
   }
@@ -522,14 +504,14 @@ window.addEventListener("DOMContentLoaded", () => {
   safeOn(clearHistoryBtn, "click", () => {
     chats = [];
     saveChats();
-    setActiveChatId("");
+    setActiveChat("");
     activeMessages = [];
     renderChatMessages();
     renderChatsList();
-    if (planBtn) planBtn.hidden = true;
+    updatePlanButtonVisibility();
   });
 
-  // init active chat
+  // при старте подтянем активный
   if (activeChatId && getChatById(activeChatId)) {
     activeMessages = getChatById(activeChatId).messages || [];
   } else {
@@ -567,7 +549,10 @@ window.addEventListener("DOMContentLoaded", () => {
   safeOn(closePlanBtn, "click", closePlanModal);
   safeOn(planOverlay, "click", closePlanModal);
 
-  function buildHistoryPayload(limit = 60) {
+  // =========================
+  // HISTORY PAYLOAD for SERVER
+  // =========================
+  function buildHistoryPayload(limit = 40) {
     const chat = getChatById(activeChatId);
     const msgs = (chat?.messages || []).slice(-limit);
 
@@ -583,6 +568,21 @@ window.addEventListener("DOMContentLoaded", () => {
     return { history, transcript };
   }
 
+  // =========================
+  // PLAN BUTTON VISIBILITY
+  // =========================
+  function updatePlanButtonVisibility() {
+    if (!planBtn) return;
+    const chat = getChatById(activeChatId);
+    const ok = chat && chat.messages && chat.messages.length >= 2;
+    planBtn.hidden = !ok;
+  }
+
+  updatePlanButtonVisibility();
+
+  // =========================
+  // RENDER PLAN CARDS (accept/reject)
+  // =========================
   function renderPlanCards(cards) {
     const wrap = document.createElement("div");
     wrap.className = "cardsArea";
@@ -591,7 +591,7 @@ window.addEventListener("DOMContentLoaded", () => {
       const box = document.createElement("div");
       box.className = "cardBox";
 
-      const title = document.createElement("div");
+      const title = document.createElement("h3");
       title.className = "cardTitle";
       title.textContent = card?.title ? String(card.title) : `План #${idx + 1}`;
 
@@ -599,22 +599,23 @@ window.addEventListener("DOMContentLoaded", () => {
       ul.className = "cardTasks";
 
       const tasksInCard = Array.isArray(card?.tasks) ? card.tasks : [];
-      const list = [];
+      const taskTexts = [];
 
       tasksInCard.forEach((t) => {
-        const text = t?.t || t?.text || t?.title || String(t || "");
-        if (!text) return;
-        list.push(String(text));
+        const txt = (t && (t.t || t.text || t.title)) ? String(t.t || t.text || t.title) : (t ? String(t) : "");
+        if (!txt) return;
+
+        taskTexts.push(txt);
 
         const li = document.createElement("li");
         li.className = "cardTask";
 
         const left = document.createElement("div");
-        left.textContent = String(text);
+        left.textContent = txt;
 
         const right = document.createElement("div");
         right.className = "taskMeta";
-        right.textContent = t?.time || t?.tag ? String(t.time || t.tag) : "";
+        right.textContent = (t && (t.time || t.tag)) ? String(t.time || t.tag) : "";
 
         li.appendChild(left);
         li.appendChild(right);
@@ -635,7 +636,7 @@ window.addEventListener("DOMContentLoaded", () => {
       reject.textContent = "Отклонить";
 
       accept.addEventListener("click", () => {
-        if (list.length) addTasksFromAI(list);
+        if (taskTexts.length) addTasksFromAI(taskTexts);
         box.style.opacity = "0.6";
         accept.disabled = true;
         reject.disabled = true;
@@ -662,74 +663,8 @@ window.addEventListener("DOMContentLoaded", () => {
     return wrap;
   }
 
-  async function createPlanFromActiveChat() {
-    if (isLoading) return;
-
-    const chat = getChatById(activeChatId);
-    if (!chat || !chat.messages || chat.messages.length < 2) {
-      pushMsg("ai", "Пока мало переписки для плана 🙂");
-      return;
-    }
-
-    openPlanModal("<div class='historyItem'>Создаю план…</div>");
-
-    isLoading = true;
-    if (planBtn) planBtn.disabled = true;
-
-    try {
-      const profile = loadProfile();
-const { history, transcript } = buildHistoryPayload(60);
-
-const res = await fetch(`${API_BASE}/api/plan`, {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({
-    mode: "plan",
-    text: "Сделай план и карточки задач на основе диалога:\n\n" + transcript, // ✅ ВОТ ЭТО ВАЖНО
-    profile,
-    history,
-    transcript
-  })
-});
-
-
-      const raw = await res.text();
-      let data;
-      try { data = JSON.parse(raw); }
-      catch {
-        openPlanModal("<div class='historyItem'>Ошибка: сервер вернул не JSON.</div>");
-        return;
-      }
-
-      if (!res.ok) {
-        openPlanModal("<div class='historyItem'>Ошибка плана: " + escapeHtml(data?.error || data?.message || "bad response") + "</div>");
-        return;
-      }
-
-      const cards = Array.isArray(data?.cards) ? data.cards : [];
-      if (!cards.length) {
-        openPlanModal("<div class='historyItem'>План пустой. Напиши больше деталей 🙂</div>");
-        return;
-      }
-
-      openPlanModal(renderPlanCards(cards));
-
-      // после успеха можно спрятать кнопку
-      if (planBtn) planBtn.hidden = true;
-
-    } catch (e) {
-      console.log(e);
-      openPlanModal("<div class='historyItem'>Ошибка: не удалось подключиться к серверу.</div>");
-    } finally {
-      isLoading = false;
-      if (planBtn) planBtn.disabled = false;
-    }
-  }
-
-  safeOn(planBtn, "click", createPlanFromActiveChat);
-
   // =========================
-  // SEND TO AI (чат)
+  // SEND TO AI (CHAT MODE)
   // =========================
   async function sendToAI() {
     if (isLoading) return;
@@ -744,13 +679,11 @@ const res = await fetch(`${API_BASE}/api/plan`, {
       ensureActiveChat(text);
     }
 
-    // переходим в чат
     switchScreen("chat");
 
-    // пишем сообщение пользователя
+    // ✅ добавляем сообщение пользователя
     pushMsg("user", text);
 
-    // очищаем ввод
     if (promptEl) promptEl.value = "";
 
     isLoading = true;
@@ -760,7 +693,7 @@ const res = await fetch(`${API_BASE}/api/plan`, {
     try {
       const profile = loadProfile();
 
-      // ✅ отправляем историю, чтобы AI "помнил"
+      // ✅ история уже включает user-msg (потому что pushMsg выше)
       const { history, transcript } = buildHistoryPayload(40);
 
       const res = await fetch(`${API_BASE}/api/plan`, {
@@ -779,7 +712,7 @@ const res = await fetch(`${API_BASE}/api/plan`, {
       let data;
       try { data = JSON.parse(raw); }
       catch {
-        pushMsg("ai", "Ошибка: сервер вернул не JSON. Проверь Console (F12).");
+        pushMsg("ai", "Ошибка: сервер вернул не JSON.");
         return;
       }
 
@@ -788,15 +721,12 @@ const res = await fetch(`${API_BASE}/api/plan`, {
         return;
       }
 
-      const answer = typeof data?.text === "string" ? data.text.trim() : "";
-      if (answer) pushMsg("ai", answer);
-      else pushMsg("ai", "AI вернул пустой ответ. Попробуй ещё раз через 5–10 сек.");
+      const answer = (typeof data?.text === "string" ? data.text.trim() : "");
+      pushMsg("ai", answer || "AI вернул пустой ответ 😶");
 
-      // ✅ после первого ответа показываем кнопку плана
-      if (planBtn) planBtn.hidden = false;
-
+      updatePlanButtonVisibility();
     } catch (e) {
-      console.log("FETCH ERROR:", e);
+      console.log(e);
       pushMsg("ai", "Ошибка: не удалось подключиться к серверу.");
     } finally {
       if (chatTyping) chatTyping.hidden = true;
@@ -814,8 +744,87 @@ const res = await fetch(`${API_BASE}/api/plan`, {
     }
   });
 
-  // При загрузке: если есть активный чат и он не пустой — показываем кнопку плана
-  if (planBtn) {
-    planBtn.hidden = !(activeMessages.length >= 2);
+  // =========================
+  // CREATE PLAN (PLAN MODE) — ONLY BY BUTTON
+  // =========================
+  async function createPlanFromChat() {
+    if (isLoading) return;
+
+    const chat = getChatById(activeChatId);
+    if (!chat || !chat.messages || chat.messages.length < 2) {
+      pushMsg("ai", "Пока мало переписки для плана 🙂");
+      return;
+    }
+
+    isLoading = true;
+    planBtn.disabled = true;
+
+    try {
+      const profile = loadProfile();
+      const { history, transcript } = buildHistoryPayload(80);
+
+      openPlanModal("<div class='historyItem'>Создаю план…</div>");
+
+      const res = await fetch(`${API_BASE}/api/plan`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mode: "plan",
+          text: "Сделай план на основе диалога и верни карточки задач.",
+          profile,
+          history,
+          transcript
+        })
+      });
+
+      const raw = await res.text();
+      let data;
+      try { data = JSON.parse(raw); }
+      catch {
+        openPlanModal("<div class='historyItem'>Ошибка: сервер вернул не JSON.</div>");
+        return;
+      }
+
+      if (!res.ok) {
+        openPlanModal("<div class='historyItem'>Ошибка плана: " + (data?.error || data?.message || "bad response") + "</div>");
+        return;
+      }
+
+      const cards = Array.isArray(data?.cards) ? data.cards : [];
+      if (!cards.length) {
+        openPlanModal("<div class='historyItem'>План пустой. Напиши больше деталей в чате 🙂</div>");
+        return;
+      }
+
+      openPlanModal(renderPlanCards(cards));
+    } catch (e) {
+      console.log(e);
+      openPlanModal("<div class='historyItem'>Ошибка: не удалось подключиться к серверу.</div>");
+    } finally {
+      isLoading = false;
+      planBtn.disabled = false;
+    }
   }
+
+
+  function updatePlanButton() {
+  if (!planBtn) return;
+
+  const enough = Array.isArray(activeMessages) && activeMessages.length >= 2;
+  const inChat = currentScreen === "chat";
+
+  // показываем только если мы в чате и есть хотя бы 2 сообщения
+  planBtn.hidden = !(inChat && enough);
+}
+
+
+  safeOn(planBtn, "click", createPlanFromChat);
+
+  // =========================
+  // EXPORT (если нужно)
+  // =========================
+  window.LSD = {
+    startNewChat,
+    getActiveChatId: () => activeChatId
+  };
 });

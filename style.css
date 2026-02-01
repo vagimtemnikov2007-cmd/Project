@@ -161,14 +161,17 @@ margin-top: 100px;
 input {
   flex: 1;
   background: transparent;   /* убирает фон */
-  border: 2px solid white;
+  border: 2px;
   border-radius: 25px;               /* убирает рамку */
-  outline: white;              /* убирает обводку при фокусе */
+  outline: 2px solid white;              /* убирает обводку при фокусе */
   font-size: 20px;
-    background-color: rgb(0, 183, 255);
+  color: #fff;
   padding: 8px 12px;   /* воздух внутри */
+  
 }
-
+input::placeholder {
+  color: rgb(255, 255, 255);
+}
 .settings_bt {
   background: transparent;
   width: 50px;
@@ -245,33 +248,110 @@ input {
   cursor: pointer;
 }
 
-.tasksList {
+/* ===== TASKS -> CARDS STYLE (как в плане) ===== */
+
+.tasksBox{
+  width: 90%;
+  max-width: 520px;
+  background: rgb(241, 241, 241);   /* как cardBox */
+  border-radius: 14px;
+  padding: 12px;
+}
+
+.tasksHeader{
+  display:flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.tasksHeader h2{
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.clearBtn{
+  background: transparent;
+  border: 0;
+  color: rgb(53, 166, 211);
+  font-weight: 800;
+  cursor: pointer;
+  padding: 6px 8px;
+  border-radius: 10px;
+}
+
+.clearBtn:active{
+  transform: scale(0.98);
+  opacity: 0.9;
+}
+
+/* список карточек */
+.tasksList{
   list-style: none;
   padding: 0;
-  margin: 12px 0 6px;
+  margin: 0;
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
-.taskItem {
+/* каждая задача = карточка как cardTask */
+.taskItem{
   background: #fff;
   border-radius: 12px;
-  padding: 10px;
+  padding: 10px 12px;
   display: flex;
-  gap: 10px;
   align-items: center;
+  gap: 10px;
+
+  font-size: 14px;
+  line-height: 1.35;
 }
 
-.taskItem.done {
+/* чекбокс чуть аккуратнее */
+.taskItem input[type="checkbox"]{
+  width: 18px;
+  height: 18px;
+  accent-color: rgb(53, 166, 211);
+  flex: 0 0 auto;
+}
+
+/* текст задачи */
+.taskItem .taskText{
+  flex: 1;
+}
+
+/* выполнено */
+.taskItem.done{
   opacity: 0.65;
+}
+
+.taskItem.done .taskText{
   text-decoration: line-through;
 }
 
-.tasksHint {
-  margin: 0;
+/* подсказка снизу */
+.tasksHint{
+  margin: 10px 2px 0;
   opacity: 0.7;
-  font-size: 14px;
+  font-size: 13px;
 }
+
+/* ===== DARK MODE для задач ===== */
+body.dark .tasksBox{
+  background: #1a1a27; /* как твой dark cardBox */
+  color: #fff;
+}
+
+body.dark .taskItem{
+  background: #14141c; /* как твой dark cardTask */
+  color: #fff;
+}
+
+body.dark .clearBtn{
+  color: rgba(255,255,255,0.85);
+}
+
 
 /* -------- THEME VARIABLES -------- */
 /* ---- Drawer (left -> right, half screen) ---- */
@@ -429,6 +509,7 @@ body.dark {
 main { background-color: var(--bg); }
 .tab {   background-color: transparent; }
 .header { background-color: var(--accent); }
+.screen.active img { filter: invert(0); }
 
 /* Dark mode (в твоём стиле, но темнее) */
 body.dark .drawer { background: #14141c; border-right-color: rgba(255,255,255,0.12); }
@@ -437,6 +518,14 @@ body.dark .historyList { background: #14141c; }
 body.dark .historyItem { border-color: rgba(255,255,255,0.12); }
 body.dark .themeBtn { border-color: rgba(255,255,255,0.18); color: #fff; }
 body.dark .drawerClose, body.dark .drawerTitle { color: #fff; }
+body.dark .screen.active img { filter: invert(1); }
+body.dark .drawerCard { color: #fff;}
+
+/* По умолчанию скрываем кнопку */
+#planBtn { display: none; }
+
+/* Показываем только в режиме чата */
+body.chat-mode #planBtn { display: inline-flex; }
 
 
 /* Аватар как кнопка */
