@@ -275,26 +275,30 @@ window.addEventListener("DOMContentLoaded", () => {
   // =========================
   // INIT USER IN DB (on app open)
   // =========================
-  async function initUserInDB() {
-    const tg_id = getTgIdOrNull();
-    if (!tg_id) return;
+async function initUserInDB() {
+  const tg_id = getTgIdOrNull();
+  dbg("initUserInDB: tg_id=" + tg_id);
 
-    try {
-      const profile = loadProfile();
+  if (!tg_id) {
+    dbg("❌ Нет tg_id. Открыто НЕ внутри Telegram или нет user в initDataUnsafe.");
+    return;
+  }
 
-      const { ok, status, data } = await postJSON(`${API_BASE}/api/user/init`, {
-        tg_id,
-        profile,
-      });
+  try {
+    const profile = loadProfile();
+    dbg("➡️ Отправляю /api/user/init ...");
 
-      if (!ok) {
-        console.log("INIT USER failed:", status, data);
-      } else {
-        console.log("INIT USER ok:", data);
-      }
-    } catch (e) {
-      console.log("INIT USER error:", e);
-    }
+    const { ok, status, data } = await postJSON(`${API_BASE}/api/user/init`, {
+      tg_id,
+      profile,
+    });
+
+    dbg(`⬅️ Ответ: ok=${ok} status=${status} data=${JSON.stringify(data)}`);
+  } catch (e) {
+    dbg("❌ Ошибка initUserInDB: " + String(e?.message || e));
+  }
+}
+
   }
 
   // =========================
@@ -398,6 +402,11 @@ window.addEventListener("DOMContentLoaded", () => {
       if (planBtn) planBtn.disabled = false;
     }
   }
+const debugLine = document.getElementById("debugLine");
+function dbg(msg) {
+  if (debugLine) debugLine.textContent = String(msg);
+}
+
 
   // =========================
   // BINDINGS
