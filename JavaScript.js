@@ -436,6 +436,7 @@ function dbg(msg) {
     if (userEl) userEl.textContent = "Открой внутри Telegram WebApp 🙂";
   }
 
+  
   // =========================
   // INIT UI
   // =========================
