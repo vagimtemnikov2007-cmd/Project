@@ -1,9 +1,15 @@
+// LSD Front — FULL (init user on open + chat + plan)
+// Drop-in replacement for your current file
+
 window.addEventListener("DOMContentLoaded", () => {
+  // =========================
+  // HELPERS
+  // =========================
   const $ = (id) => document.getElementById(id);
   const on = (el, ev, fn) => el && el.addEventListener(ev, fn);
 
   // =========================
-  // SAFE STORAGE (Telegram WebView фикс)
+  // SAFE STORAGE (Telegram WebView fix)
   // =========================
   const memStore = new Map();
 
@@ -28,7 +34,11 @@ window.addEventListener("DOMContentLoaded", () => {
   function sJSONGet(key, fallback) {
     const raw = sGet(key, null);
     if (raw == null) return fallback;
-    try { return JSON.parse(raw); } catch { return fallback; }
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return fallback;
+    }
   }
 
   function sJSONSet(key, obj) {
@@ -41,8 +51,8 @@ window.addEventListener("DOMContentLoaded", () => {
   const API_BASE = "https://lsd-server-ml3z.onrender.com";
 
   const STORAGE_PROFILE = "lsd_profile_v2";
-  const STORAGE_ACTIVE_CHAT = "lsd_active_chat_v2"; // chat_id
-  const STORAGE_CHAT_CACHE = "lsd_chat_cache_v2";   // {chat_id: {messages:[...]}} для офлайна
+  const STORAGE_ACTIVE_CHAT = "lsd_active_chat_v2";
+  const STORAGE_CHAT_CACHE = "lsd_chat_cache_v2";
 
   function uuid() {
     if (crypto?.randomUUID) return crypto.randomUUID();
@@ -69,8 +79,11 @@ window.addEventListener("DOMContentLoaded", () => {
 
     const raw = await res.text();
     let data = null;
-    try { data = raw ? JSON.parse(raw) : null; }
-    catch { data = { error: "bad_json_from_server", raw }; }
+    try {
+      data = raw ? JSON.parse(raw) : null;
+    } catch {
+      data = { error: "bad_json_from_server", raw };
+    }
 
     return { ok: res.ok, status: res.status, data };
   }
@@ -104,15 +117,22 @@ window.addEventListener("DOMContentLoaded", () => {
   // UI: SCREEN SWITCH
   // =========================
   let currentScreen = "home";
+
   function setNavLabel() {
     if (!navBtnText) return;
     navBtnText.textContent = currentScreen === "home" ? "задачи" : "назад";
+  }
+
+  function scrollToBottom() {
+    if (!chatMessagesEl) return;
+    chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
   }
 
   function switchScreen(name) {
     [screenHome, screenTasks, screenChat].forEach((s) => s && s.classList.remove("active"));
     const el = name === "home" ? screenHome : name === "tasks" ? screenTasks : screenChat;
     el && el.classList.add("active");
+
     currentScreen = name;
     document.body.classList.toggle("chat-mode", name === "chat");
     setNavLabel();
@@ -124,11 +144,6 @@ window.addEventListener("DOMContentLoaded", () => {
     if (currentScreen === "home") switchScreen("tasks");
     else switchScreen("home");
   });
-
-  function scrollToBottom() {
-    if (!chatMessagesEl) return;
-    chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
-  }
 
   // =========================
   // PROFILE
@@ -146,7 +161,6 @@ window.addEventListener("DOMContentLoaded", () => {
     sSet(STORAGE_ACTIVE_CHAT, activeChatId);
   }
 
-  // cache in browser (for rendering)
   const chatCache = sJSONGet(STORAGE_CHAT_CACHE, {});
   if (!chatCache[activeChatId]) chatCache[activeChatId] = { messages: [] };
 
@@ -168,12 +182,14 @@ window.addEventListener("DOMContentLoaded", () => {
   function renderMessages() {
     if (!chatMessagesEl) return;
     chatMessagesEl.innerHTML = "";
+
     messages().forEach((m) => {
       const div = document.createElement("div");
       div.className = "msg " + (m.who === "user" ? "user" : "ai");
       div.textContent = m.text;
       chatMessagesEl.appendChild(div);
     });
+
     scrollToBottom();
     updatePlanVisibility();
   }
@@ -189,12 +205,14 @@ window.addEventListener("DOMContentLoaded", () => {
   // =========================
   function openPlanModal(contentNodeOrHTML) {
     if (!planOverlay || !planModal || !planContent) return;
+
     if (typeof contentNodeOrHTML === "string") {
       planContent.innerHTML = contentNodeOrHTML;
     } else {
       planContent.innerHTML = "";
       planContent.appendChild(contentNodeOrHTML);
     }
+
     planOverlay.classList.add("open");
     planModal.classList.add("open");
   }
@@ -235,6 +253,7 @@ window.addEventListener("DOMContentLoaded", () => {
 
         const right = document.createElement("div");
         right.className = "taskMeta";
+
         const meta = [];
         if (Number.isFinite(Number(t?.min))) meta.push(`${Number(t.min)}м`);
         if (t?.energy) meta.push(String(t.energy));
@@ -254,7 +273,32 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 
   // =========================
-  // SEND MESSAGE (SERVER DB CHAT)
+  // INIT USER IN DB (on app open)
+  // =========================
+  async function initUserInDB() {
+    const tg_id = getTgIdOrNull();
+    if (!tg_id) return;
+
+    try {
+      const profile = loadProfile();
+
+      const { ok, status, data } = await postJSON(`${API_BASE}/api/user/init`, {
+        tg_id,
+        profile,
+      });
+
+      if (!ok) {
+        console.log("INIT USER failed:", status, data);
+      } else {
+        console.log("INIT USER ok:", data);
+      }
+    } catch (e) {
+      console.log("INIT USER error:", e);
+    }
+  }
+
+  // =========================
+  // SEND MESSAGE
   // =========================
   let isLoading = false;
 
@@ -326,8 +370,8 @@ window.addEventListener("DOMContentLoaded", () => {
 
     try {
       openPlanModal("<div class='historyItem'>Создаю план…</div>");
-      const profile = loadProfile();
 
+      const profile = loadProfile();
       const { ok, status, data } = await postJSON(`${API_BASE}/api/plan/create`, {
         tg_id,
         chat_id: activeChatId,
@@ -374,14 +418,20 @@ window.addEventListener("DOMContentLoaded", () => {
   if (tg) {
     tg.ready();
     tg.expand();
+
     const u = tg.initDataUnsafe?.user;
     if (userEl) userEl.textContent = "Привет, " + (u?.first_name || "друг");
     if (avatarEl && u?.photo_url) avatarEl.src = u.photo_url;
+
+    // create user in DB on open
+    initUserInDB();
   } else {
     if (userEl) userEl.textContent = "Открой внутри Telegram WebApp 🙂";
   }
 
+  // =========================
   // INIT UI
+  // =========================
   switchScreen("home");
   renderMessages();
 
