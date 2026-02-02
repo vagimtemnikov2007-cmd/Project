@@ -299,8 +299,6 @@ async function initUserInDB() {
   }
 }
 
-  }
-
   // =========================
   // SEND MESSAGE
   // =========================
