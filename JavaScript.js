@@ -733,7 +733,7 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 
 // =========================
-// SEND TO AI (CHAT MODE)
+// SEND TO AI (CHAT MODE) — FIXED (ответ всегда в тот же chatId)
 // =========================
 async function sendToAI() {
   if (isLoading) return;
@@ -741,19 +741,26 @@ async function sendToAI() {
   const text = (promptEl?.value || "").trim();
   if (!text) return;
 
-  // если отправили НЕ из экрана чата — начинаем НОВЫЙ чат
-  if (currentScreen !== "chat") startNewChat(text);
-  else ensureActiveChat(text);
-
-  switchScreen("chat");
-  pushMsg("user", text);
-  if (promptEl) promptEl.value = "";
-
   const tg_id = getTgIdOrNull();
   if (!tg_id) {
-    pushMsg("ai", "Ошибка: tg_id_required (открой мини-апп внутри Telegram)");
+    // сюда нельзя pushMsgToChat, потому что чата может не быть
+    openPlanModal?.("<div class='historyItem'>Ошибка: tg_id_required (открой мини-апп внутри Telegram)</div>");
     return;
   }
+
+  // 1) гарантируем чат и фиксируем chatId, куда вернётся ответ
+  let chatId;
+  if (currentScreen !== "chat") chatId = startNewChat(text);
+  else chatId = ensureActiveChat(text);
+
+  // 2) делаем активным этот чат, чтобы UI совпадал
+  setActiveChat(chatId);
+  switchScreen("chat");
+
+  // 3) пишем user msg В ЭТОТ ЧАТ
+  pushMsgToChat(chatId, "user", text);
+
+  if (promptEl) promptEl.value = "";
 
   isLoading = true;
   if (sendBtn) sendBtn.disabled = true;
@@ -761,7 +768,7 @@ async function sendToAI() {
 
   try {
     const profile = loadProfile();
-    const { history, transcript } = buildHistoryPayload(80);
+    const { history, transcript } = buildHistoryPayloadForChat(chatId, 80);
 
     const res = await fetch(`${API_BASE}/api/plan`, {
       method: "POST",
@@ -772,40 +779,43 @@ async function sendToAI() {
         text,
         profile,
         history,
-        transcript
+        transcript,
       }),
     });
 
     const raw = await res.text();
     let data;
-    try { data = JSON.parse(raw); }
-    catch {
-      pushMsg("ai", "Ошибка: сервер вернул не JSON.");
+    try {
+      data = raw ? JSON.parse(raw) : {};
+    } catch {
+      pushMsgToChat(chatId, "ai", "Ошибка: сервер вернул не JSON.");
       return;
     }
 
     if (!res.ok) {
-      // покажем реальную ошибку сервера
-      pushMsg("ai", "Ошибка AI: " + (data?.error || data?.message || "bad_response"));
+      const msg = data?.error || data?.message || `HTTP ${res.status}`;
+      pushMsgToChat(chatId, "ai", "Ошибка AI: " + msg);
       return;
     }
 
-    const answer = (typeof data?.text === "string" ? data.text.trim() : "");
-    pushMsg("ai", answer || "AI вернул пустой ответ 😶");
-    updatePlanButtonVisibility();
+    const answer = typeof data?.text === "string" ? data.text.trim() : "";
+    pushMsgToChat(chatId, "ai", answer || "AI вернул пустой ответ 😶");
   } catch (e) {
     console.log("CHAT ERROR:", e);
-    pushMsg("ai", "Ошибка: не удалось подключиться к серверу.");
+    pushMsgToChat(chatId, "ai", "Ошибка: не удалось подключиться к серверу.");
   } finally {
     if (chatTyping) chatTyping.hidden = true;
     isLoading = false;
     if (sendBtn) sendBtn.disabled = false;
+
+    // обновим кнопку плана
+    updatePlanButtonVisibility();
   }
 }
 
 
 // =========================
-// CREATE PLAN (PLAN MODE) — ONLY BY BUTTON
+// CREATE PLAN (PLAN MODE) — FIXED (ответ всегда для активного чата)
 // =========================
 async function createPlanFromChat() {
   if (isLoading) return;
@@ -816,7 +826,9 @@ async function createPlanFromChat() {
     return;
   }
 
-  const chat = getChatById(activeChatId);
+  const chatId = activeChatId;
+  const chat = getChatById(chatId);
+
   if (!chat || !Array.isArray(chat.messages) || chat.messages.length < 2) {
     openPlanModal("<div class='historyItem'>Пока мало переписки для плана 🙂</div>");
     return;
@@ -827,7 +839,7 @@ async function createPlanFromChat() {
 
   try {
     const profile = loadProfile();
-    const { history, transcript } = buildHistoryPayload(120);
+    const { history, transcript } = buildHistoryPayloadForChat(chatId, 120);
 
     openPlanModal("<div class='historyItem'>Создаю план…</div>");
 
@@ -840,29 +852,32 @@ async function createPlanFromChat() {
         text: "Сделай план на основе диалога и верни карточки задач.",
         profile,
         history,
-        transcript
+        transcript,
       }),
     });
 
     const raw = await res.text();
     let data;
-    try { data = JSON.parse(raw); }
-    catch {
+    try {
+      data = raw ? JSON.parse(raw) : {};
+    } catch {
       openPlanModal("<div class='historyItem'>Ошибка: сервер вернул не JSON.</div>");
       return;
     }
 
     if (!res.ok) {
-      // ВАЖНО: покажем реальную причину
       if (data?.error === "no_plans_left") {
-        openPlanModal(`<div class='historyItem'>Лимит планов закончился 😢<br>plans_left: ${data?.plans_left ?? 0}</div>`);
+        openPlanModal(
+          `<div class='historyItem'>Лимит планов закончился 😢<br>plans_left: ${data?.plans_left ?? 0}</div>`
+        );
         return;
       }
       if (res.status === 429 || data?.error === "ai_limit") {
         openPlanModal("<div class='historyItem'>⏳ AI временно перегружен. Попробуй позже.</div>");
         return;
       }
-      openPlanModal("<div class='historyItem'>Ошибка плана: " + (data?.error || data?.message || "bad_response") + "</div>");
+
+      openPlanModal("<div class='historyItem'>Ошибка плана: " + (data?.error || data?.message || `HTTP ${res.status}`) + "</div>");
       return;
     }
 
@@ -882,8 +897,21 @@ async function createPlanFromChat() {
   }
 }
 
+
+// =========================
+// BIND EVENTS (только эти)
+// =========================
 safeOn(sendBtn, "click", sendToAI);
+
+safeOn(promptEl, "keydown", (e) => {
+  if (e.key === "Enter") {
+    e.preventDefault();
+    sendToAI();
+  }
+});
+
 safeOn(planBtn, "click", createPlanFromChat);
+
 
   // =========================
   // INIT VISIBILITY
