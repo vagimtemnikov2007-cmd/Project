@@ -423,23 +423,6 @@ function dbg(msg) {
   // =========================
 const u = tg.initDataUnsafe?.user;
 
-// 👇 проверяем, есть ли user и id
-if (!u || !u.id) {
-  if (userEl) {
-    userEl.textContent = "tg_id: ❌ нет (открыто не из бота)";
-  }
-} else {
-  if (userEl) {
-    userEl.textContent = "Привет, " + (u.first_name || "друг") + " (id: " + u.id + ")";
-  }
-    initUserInDB();
-  // аватар
-  if (avatarEl && u.photo_url) {
-    avatarEl.src = u.photo_url;
-  }
-}
-
-
     // create user in DB on open
 
 
