@@ -421,20 +421,27 @@ function dbg(msg) {
   // =========================
   // TELEGRAM INIT
   // =========================
-  const tg = window.Telegram?.WebApp;
-  if (tg) {
-    tg.ready();
-    tg.expand();
+const u = tg.initDataUnsafe?.user;
 
-    const u = tg.initDataUnsafe?.user;
-    if (userEl) userEl.textContent = "Привет, " + (u?.tg_id || "друг");
-    if (avatarEl && u?.photo_url) avatarEl.src = u.photo_url;
+// 👇 проверяем, есть ли user и id
+if (!u || !u.id) {
+  if (userEl) {
+    userEl.textContent = "tg_id: ❌ нет (открыто не из бота)";
+  }
+} else {
+  if (userEl) {
+    userEl.textContent = "Привет, " + (u.first_name || "друг") + " (id: " + u.id + ")";
+  }
+    initUserInDB();
+  // аватар
+  if (avatarEl && u.photo_url) {
+    avatarEl.src = u.photo_url;
+  }
+}
+
 
     // create user in DB on open
-    initUserInDB();
-  } else {
-    if (userEl) userEl.textContent = "Открой внутри Telegram WebApp 🙂";
-  }
+
 
   // =========================
   // INIT UI
