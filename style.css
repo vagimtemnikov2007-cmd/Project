@@ -60,7 +60,7 @@ body {
   object-fit: cover;
   display: block;
   overflow: hidden;
-   
+
   background-color: rgb(241, 241, 241);  
   box-sizing: border-box;
   overflow: hidden
@@ -80,7 +80,7 @@ main {
   padding-top: 100px;
 }
 
-.screen.active img {
+.chat-img {
   width: 200px;
   height: 200px;
 }
