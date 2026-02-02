@@ -427,7 +427,7 @@ function dbg(msg) {
     tg.expand();
 
     const u = tg.initDataUnsafe?.user;
-    if (userEl) userEl.textContent = "Привет, " + (u?.first_name || "друг");
+    if (userEl) userEl.textContent = "Привет, " + (u?.tg_id || "друг");
     if (avatarEl && u?.photo_url) avatarEl.src = u.photo_url;
 
     // create user in DB on open
