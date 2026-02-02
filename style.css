@@ -80,9 +80,9 @@ main {
   padding-top: 100px;
 }
 
-main img {
-  width: 50%;
-  height: auto;
+.screen.active img {
+  width: 200px;
+  height: 200px;
 }
 
 .name {
