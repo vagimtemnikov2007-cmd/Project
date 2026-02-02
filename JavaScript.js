@@ -829,6 +829,7 @@ const res = await fetch(`${API_BASE}/api/plan`, {
   // показываем только если мы в чате и есть хотя бы 2 сообщения
   planBtn.hidden = !(inChat && enough);
 }
+document.body.setAttribute("data-build", "BUILD_2026-02-03_03-40");
 
 
   safeOn(planBtn, "click", createPlanFromChat);
