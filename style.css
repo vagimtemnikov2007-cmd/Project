@@ -1,3 +1,9 @@
+html, body { height: 100%; }
+body { height: 100vh; }
+main { flex: 1; min-height: 0; }
+#screen-chat { min-height: 0; }
+.chatMessages { min-height: 0; }
+
 body {
   min-height: 100vh;
   margin: 0;
