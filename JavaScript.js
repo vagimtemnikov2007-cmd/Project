@@ -90,6 +90,13 @@ window.addEventListener("DOMContentLoaded", () => {
   // =========================
   const API_BASE = "https://lsd-server-ml3z.onrender.com";
 
+
+  function getTgIdOrNull() {
+  const tg = window.Telegram?.WebApp;
+  const id = tg?.initDataUnsafe?.user?.id;
+  return Number.isFinite(Number(id)) ? Number(id) : null;
+}
+
   // =========================
   // SCREEN SWITCH (smooth)
   // =========================
@@ -666,74 +673,77 @@ window.addEventListener("DOMContentLoaded", () => {
   // =========================
   // SEND TO AI (CHAT MODE)
   // =========================
-  async function sendToAI() {
-    if (isLoading) return;
+async function sendToAI() {
+  if (isLoading) return;
 
-    const text = (promptEl?.value || "").trim();
-    if (!text) return;
+  const text = (promptEl?.value || "").trim();
+  if (!text) return;
 
-    // ✅ если отправили НЕ из экрана чата — начинаем НОВЫЙ чат
-    if (currentScreen !== "chat") {
-      startNewChat(text);
-    } else {
-      ensureActiveChat(text);
-    }
+  // ✅ если отправили НЕ из экрана чата — начинаем НОВЫЙ чат
+  if (currentScreen !== "chat") startNewChat(text);
+  else ensureActiveChat(text);
 
-    switchScreen("chat");
+  switchScreen("chat");
 
-    // ✅ добавляем сообщение пользователя
-    pushMsg("user", text);
+  // ✅ сохраняем сообщение пользователя в локальный чат
+  pushMsg("user", text);
 
-    if (promptEl) promptEl.value = "";
+  if (promptEl) promptEl.value = "";
 
-    isLoading = true;
-    if (sendBtn) sendBtn.disabled = true;
-    if (chatTyping) chatTyping.hidden = false;
-
-    try {
-      const profile = loadProfile();
-
-      // ✅ история уже включает user-msg (потому что pushMsg выше)
-      const { history, transcript } = buildHistoryPayload(40);
-
-      const res = await fetch(`${API_BASE}/api/plan`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          mode: "chat",
-          text,
-          profile,
-          history,
-          transcript
-        })
-      });
-
-      const raw = await res.text();
-      let data;
-      try { data = JSON.parse(raw); }
-      catch {
-        pushMsg("ai", "Ошибка: сервер вернул не JSON.");
-        return;
-      }
-
-      if (!res.ok) {
-        pushMsg("ai", "Ошибка AI: " + (data?.error || data?.message || "bad response"));
-        return;
-      }
-
-      const answer = (typeof data?.text === "string" ? data.text.trim() : "");
-      pushMsg("ai", answer || "AI вернул пустой ответ 😶");
-
-      updatePlanButtonVisibility();
-    } catch (e) {
-      console.log(e);
-      pushMsg("ai", "Ошибка: не удалось подключиться к серверу.");
-    } finally {
-      if (chatTyping) chatTyping.hidden = true;
-      isLoading = false;
-      if (sendBtn) sendBtn.disabled = false;
-    }
+  const tg_id = getTgIdOrNull();
+  if (!tg_id) {
+    pushMsg("ai", "Ошибка: tg_id_required (открой мини-апп внутри Telegram)");
+    return;
   }
+
+  isLoading = true;
+  if (sendBtn) sendBtn.disabled = true;
+  if (chatTyping) chatTyping.hidden = false;
+
+  try {
+    const profile = loadProfile();
+    const { history, transcript } = buildHistoryPayload(80);
+
+    const res = await fetch(`${API_BASE}/api/plan`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        tg_id,
+        mode: "chat",
+        text,
+        profile,
+        history,
+        transcript,
+      }),
+    });
+
+    const raw = await res.text();
+    let data;
+    try { data = JSON.parse(raw); }
+    catch {
+      pushMsg("ai", "Ошибка: сервер вернул не JSON.");
+      return;
+    }
+
+    if (!res.ok) {
+      pushMsg("ai", "Ошибка AI: " + (data?.error || data?.message || "bad response"));
+      return;
+    }
+
+    const answer = (typeof data?.text === "string" ? data.text.trim() : "");
+    pushMsg("ai", answer || "AI вернул пустой ответ 😶");
+
+    updatePlanButtonVisibility();
+  } catch (e) {
+    console.log(e);
+    pushMsg("ai", "Ошибка: не удалось подключиться к серверу.");
+  } finally {
+    if (chatTyping) chatTyping.hidden = true;
+    isLoading = false;
+    if (sendBtn) sendBtn.disabled = false;
+  }
+}
+
 
   safeOn(sendBtn, "click", sendToAI);
 
@@ -760,22 +770,25 @@ window.addEventListener("DOMContentLoaded", () => {
     planBtn.disabled = true;
 
     try {
-      const profile = loadProfile();
-      const { history, transcript } = buildHistoryPayload(80);
+const tg_id = getTgIdOrNull();
+if (!tg_id) {
+  openPlanModal("<div class='historyItem'>Ошибка: tg_id_required (открой внутри Telegram)</div>");
+  return;
+}
 
-      openPlanModal("<div class='historyItem'>Создаю план…</div>");
+const res = await fetch(`${API_BASE}/api/plan`, {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    tg_id,
+    mode: "plan",
+    text: "Сделай план на основе диалога и верни карточки задач.",
+    profile,
+    history,
+    transcript
+  })
+});
 
-      const res = await fetch(`${API_BASE}/api/plan`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          mode: "plan",
-          text: "Сделай план на основе диалога и верни карточки задач.",
-          profile,
-          history,
-          transcript
-        })
-      });
 
       const raw = await res.text();
       let data;
