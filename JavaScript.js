@@ -1,4 +1,4 @@
-// LSD Front — OLD UI + Chats in drawer history + Plan modal (Accept/Decline -> Tasks)
+// LSD Front — FULL (Chats + Plan Accept/Decline + Grouped Tasks w/ meta)
 // Drop-in replacement for your current JavaScript.js
 
 window.addEventListener("DOMContentLoaded", () => {
@@ -13,15 +13,16 @@ window.addEventListener("DOMContentLoaded", () => {
     if (debugLine) debugLine.textContent = String(msg);
   };
 
-  function escapeHTML(s) {
-    return String(s).replace(/[&<>"']/g, (ch) => ({
+  const escapeHTML = (s) =>
+    String(s).replace(/[&<>"']/g, (ch) => ({
       "&": "&amp;",
       "<": "&lt;",
       ">": "&gt;",
       '"': "&quot;",
       "'": "&#039;",
     }[ch]));
-  }
+
+  const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
 
   // =========================
   // SAFE STORAGE (Telegram WebView fix)
@@ -60,31 +61,20 @@ window.addEventListener("DOMContentLoaded", () => {
     sSet(key, JSON.stringify(obj));
   }
 
-  function sRemove(key) {
-    try {
-      localStorage.removeItem(key);
-    } catch {}
-    try {
-      memStore.delete(key);
-    } catch {}
-  }
-
   // =========================
   // CONFIG
   // =========================
   const API_BASE = "https://lsd-server-ml3z.onrender.com";
 
-  // profile
   const STORAGE_PROFILE = "lsd_profile_v2";
 
   // chats
   const STORAGE_ACTIVE_CHAT = "lsd_active_chat_v3";
-  const STORAGE_CHATS_INDEX = "lsd_chats_index_v1"; // array of chatIds
-  const STORAGE_CHAT_CACHE = "lsd_chat_cache_v3";   // { chatId: { meta, messages } }
+  const STORAGE_CHATS_INDEX = "lsd_chats_index_v1";
+  const STORAGE_CHAT_CACHE = "lsd_chat_cache_v3";
 
-  // tasks
-  const STORAGE_TASKS = "lsd_tasks_v1"; // [{id,text,done}]
-  const STORAGE_PLAN_DRAFT = "lsd_plan_draft_v1"; // {chat_id,cards,ts}
+  // grouped tasks (NEW)
+  const STORAGE_TASKS_GROUPS = "lsd_tasks_groups_v2"; // { groups: [...] }
 
   const EMOJIS = ["💬","🧠","⚡","🧩","📌","🎯","🧊","🍀","🌙","☀️","🦊","🐺","🐼","🧪","📚"];
 
@@ -115,7 +105,10 @@ window.addEventListener("DOMContentLoaded", () => {
     return Number.isFinite(n) ? n : null;
   }
 
-  async function postJSON(url, payload, timeoutMs = 25000) {
+  // =========================
+  // NETWORK (with timeout)
+  // =========================
+  async function postJSON(url, payload, timeoutMs = 20000) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -145,6 +138,7 @@ window.addEventListener("DOMContentLoaded", () => {
         e?.name === "AbortError"
           ? `timeout_${timeoutMs}ms`
           : String(e?.message || e);
+
       dbg("❌ fetch error: " + msg);
       return { ok: false, status: 0, data: { error: msg } };
     } finally {
@@ -153,7 +147,7 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 
   // =========================
-  // ELEMENTS (OLD UI)
+  // ELEMENTS (your existing ids/classes)
   // =========================
   const settingsBtn = document.querySelector(".settings_bt");
   const drawer = $("settingsDrawer");
@@ -173,10 +167,6 @@ window.addEventListener("DOMContentLoaded", () => {
   const chatTypingEl = $("chatTyping");
 
   const planBtn = $("planBtn");
-  const planOverlay = $("planOverlay");
-  const planModal = $("planModal");
-  const planContent = $("planContent");
-  const closePlanBtn = $("closePlan");
 
   const userEl = $("user");
 
@@ -193,13 +183,9 @@ window.addEventListener("DOMContentLoaded", () => {
   const menuHistory = $("menuHistory");
   const menuSettings = $("menuSettings");
 
-  // history list container (render CHATS here)
+  // history list container (chats)
   const historyList = $("historyList");
   const clearHistoryBtn = $("clearHistory");
-
-  // tasks
-  const tasksListEl = $("tasksList");
-  const clearTasksBtn = $("clearTasks");
 
   // profile modal
   const profileModal = $("profileModal");
@@ -210,6 +196,16 @@ window.addEventListener("DOMContentLoaded", () => {
   const profileAge = $("profileAge");
   const profileNick = $("profileNick");
   const profileBio = $("profileBio");
+
+  // plan modal (we will use accept/decline there)
+  const planOverlay = $("planOverlay");
+  const planModal = $("planModal");
+  const planContent = $("planContent");
+  const closePlanBtn = $("closePlan");
+
+  // tasks UI
+  const tasksListEl = $("tasksList");
+  const clearTasksBtn = $("clearTasks");
 
   // =========================
   // STATE
@@ -222,13 +218,8 @@ window.addEventListener("DOMContentLoaded", () => {
   let chatsIndex = sJSONGet(STORAGE_CHATS_INDEX, []);
   let chatCache = sJSONGet(STORAGE_CHAT_CACHE, {});
 
-  // tasks
-  let tasks = sJSONGet(STORAGE_TASKS, []);
-  let planDraft = sJSONGet(STORAGE_PLAN_DRAFT, null);
-
-  function saveTasks() { sJSONSet(STORAGE_TASKS, tasks); }
-  function savePlanDraft(d) { planDraft = d; sJSONSet(STORAGE_PLAN_DRAFT, d); }
-  function clearPlanDraft() { planDraft = null; sRemove(STORAGE_PLAN_DRAFT); }
+  // grouped tasks
+  let tasksState = sJSONGet(STORAGE_TASKS_GROUPS, { groups: [] });
 
   // =========================
   // UI: SCREEN SWITCH
@@ -243,8 +234,13 @@ window.addEventListener("DOMContentLoaded", () => {
     chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
   }
 
+  function updatePlanVisibility() {
+    if (!planBtn) return;
+    const enough = getMessages().length >= 2;
+    planBtn.hidden = !(currentScreen === "chat" && enough);
+  }
+
   function switchScreen(name) {
-    // когда уходим из чата — чистим пустые чаты
     if (currentScreen === "chat" && name !== "chat") cleanupEmptyChats();
 
     [screenHome, screenTasks, screenChat].forEach((s) => s && s.classList.remove("active"));
@@ -268,6 +264,7 @@ window.addEventListener("DOMContentLoaded", () => {
   function loadProfile() {
     return sJSONGet(STORAGE_PROFILE, { age: "", nick: "", bio: "" });
   }
+
   function saveProfile(p) {
     sJSONSet(STORAGE_PROFILE, p);
   }
@@ -285,20 +282,6 @@ window.addEventListener("DOMContentLoaded", () => {
     profileOverlay.classList.remove("open");
     profileModal.setAttribute("aria-hidden", "true");
   }
-
-  function saveProfileAndClose() {
-    const p = {
-      age: profileAge?.value ?? "",
-      nick: profileNick?.value ?? "",
-      bio: profileBio?.value ?? "",
-    };
-    saveProfile(p);
-    closeProfile();
-    initUserInDB();
-  }
-
-  on(closeProfileBtn, "click", saveProfileAndClose);
-  on(profileOverlay, "click", saveProfileAndClose);
 
   // =========================
   // THEME
@@ -333,62 +316,7 @@ window.addEventListener("DOMContentLoaded", () => {
   on(drawerOverlay, "click", closeDrawer);
 
   // =========================
-  // TASKS
-  // =========================
-  function renderTasks() {
-    if (!tasksListEl) return;
-    tasksListEl.innerHTML = "";
-
-    if (!Array.isArray(tasks) || tasks.length === 0) {
-      const li = document.createElement("li");
-      li.className = "taskItem";
-      li.innerHTML = `<div class="taskText">Пока задач нет 🙂</div>`;
-      tasksListEl.appendChild(li);
-      return;
-    }
-
-    tasks.forEach((t) => {
-      const li = document.createElement("li");
-      li.className = "taskItem" + (t.done ? " done" : "");
-      li.innerHTML = `
-        <input type="checkbox" ${t.done ? "checked" : ""} />
-        <div class="taskText">${escapeHTML(t.text)}</div>
-      `;
-
-      const cb = li.querySelector("input[type='checkbox']");
-      cb.addEventListener("change", () => {
-        t.done = !!cb.checked;
-        saveTasks();
-        renderTasks();
-      });
-
-      tasksListEl.appendChild(li);
-    });
-  }
-
-  function setTasksFromCards(cards) {
-    const flat = (cards || []).flatMap((card) => (Array.isArray(card?.tasks) ? card.tasks : []));
-    const next = [];
-
-    flat.forEach((t) => {
-      const txt = String(t?.t || "").trim();
-      if (!txt) return;
-      next.push({ id: uuid(), text: txt, done: false });
-    });
-
-    tasks = next;
-    saveTasks();
-    renderTasks();
-  }
-
-  on(clearTasksBtn, "click", () => {
-    tasks = [];
-    saveTasks();
-    renderTasks();
-  });
-
-  // =========================
-  // CHATS STORAGE (MULTI-CHAT)
+  // CHATS STORAGE
   // =========================
   function ensureChat(id) {
     if (!id) return;
@@ -400,7 +328,6 @@ window.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    // migrate possible old shapes
     if (!chatCache[id].meta) {
       chatCache[id].meta = { title: "Новый чат", emoji: pickEmoji(), updatedAt: Date.now() };
     }
@@ -428,7 +355,7 @@ window.addEventListener("DOMContentLoaded", () => {
     return chatCache[activeChatId];
   }
 
-  function messages() {
+  function getMessages() {
     if (!activeChatId) return [];
     return getActiveChat().messages || [];
   }
@@ -440,7 +367,7 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 
   function cleanupEmptyChats() {
-    const userIsInChatNow = currentScreen === "chat";
+    const userIsInChatNow = (currentScreen === "chat");
 
     const toDelete = chatsIndex.filter((id) => {
       ensureChat(id);
@@ -455,7 +382,9 @@ window.addEventListener("DOMContentLoaded", () => {
     toDelete.forEach((id) => delete chatCache[id]);
     chatsIndex = chatsIndex.filter((id) => !toDelete.includes(id));
 
-    if (toDelete.includes(activeChatId)) activeChatId = chatsIndex[0] || "";
+    if (toDelete.includes(activeChatId)) {
+      activeChatId = chatsIndex[0] || "";
+    }
 
     if (!activeChatId) {
       const id = uuid();
@@ -473,9 +402,9 @@ window.addEventListener("DOMContentLoaded", () => {
 
   function setActiveChat(id) {
     cleanupEmptyChats();
-
     activeChatId = id;
     ensureChat(activeChatId);
+
     if (!chatsIndex.includes(activeChatId)) chatsIndex.unshift(activeChatId);
     bumpChatToTop(activeChatId);
     saveChats();
@@ -524,13 +453,14 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 
   // =========================
-  // RENDER MESSAGES (ACTIVE CHAT)
+  // RENDER MESSAGES
   // =========================
   function renderMessages() {
     if (!chatMessagesEl) return;
     chatMessagesEl.innerHTML = "";
 
-    messages().forEach((m) => {
+    const arr = getMessages();
+    arr.forEach((m) => {
       const div = document.createElement("div");
       div.className = "msg " + (m.who === "user" ? "user" : "ai");
       div.textContent = m.text;
@@ -541,21 +471,14 @@ window.addEventListener("DOMContentLoaded", () => {
     updatePlanVisibility();
   }
 
-  function updatePlanVisibility() {
-    if (!planBtn) return;
-    const enough = messages().length >= 2;
-    planBtn.hidden = !(currentScreen === "chat" && enough);
-  }
-
   // =========================
-  // RENDER CHATS IN DRAWER (#historyList)
+  // RENDER CHATS LIST (drawer)
   // =========================
   function renderChatsInHistory() {
     if (!historyList) return;
 
     historyList.innerHTML = "";
 
-    // New chat row
     const newRow = document.createElement("div");
     newRow.className = "tgChatRow";
     newRow.innerHTML = `
@@ -612,16 +535,142 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 
   // =========================
-  // PLAN MODAL (Accept/Decline)
+  // TASKS (Grouped)
   // =========================
-  function openPlanModal(contentNodeOrHTML) {
+  function saveTasksState() {
+    sJSONSet(STORAGE_TASKS_GROUPS, tasksState);
+  }
+
+  function energyToLevel(energy) {
+    const e = String(energy || "").toLowerCase();
+    if (!e) return 2; // средняя по умолчанию
+
+    // варианты которые часто встречаются
+    if (e.includes("low") || e.includes("легк") || e.includes("easy")) return 1;
+    if (e.includes("high") || e.includes("тяж") || e.includes("hard")) return 3;
+    if (e.includes("med") || e.includes("сред")) return 2;
+
+    // если прилетело типа "⚡⚡⚡"
+    const bolts = (String(energy).match(/⚡/g) || []).length;
+    if (bolts) return clamp(bolts, 1, 3);
+
+    return 2;
+  }
+
+  function levelLabel(level) {
+    if (level <= 1) return "Лёгкая";
+    if (level === 2) return "Средняя";
+    return "Сложная";
+  }
+
+  function groupMeta(group) {
+    const items = Array.isArray(group.items) ? group.items : [];
+    const totalMin = items.reduce((s, t) => s + (Number.isFinite(Number(t.min)) ? Number(t.min) : 0), 0);
+    const avgLevel = items.length
+      ? Math.round(items.reduce((s, t) => s + (Number(t.level) || 2), 0) / items.length)
+      : 2;
+
+    return { totalMin, avgLevel };
+  }
+
+  function renderTasks() {
+    if (!tasksListEl) return;
+
+    const groups = Array.isArray(tasksState?.groups) ? tasksState.groups : [];
+    tasksListEl.innerHTML = "";
+
+    if (!groups.length) {
+      const li = document.createElement("li");
+      li.className = "taskItem";
+      li.innerHTML = `<div class="taskText">Задач пока нет 🙂</div>`;
+      tasksListEl.appendChild(li);
+      return;
+    }
+
+    groups.forEach((g) => {
+      const meta = groupMeta(g);
+
+      const wrap = document.createElement("li");
+      wrap.className = "taskGroup";
+      wrap.dataset.groupId = g.id;
+
+      const open = !!g.open;
+
+      wrap.innerHTML = `
+        <div class="taskGroupHead ${open ? "open" : ""}">
+          <div class="taskGroupTitle">${escapeHTML(g.title || "План")}</div>
+          <div class="taskGroupMeta">
+            <span class="metaPill">⏱ ${meta.totalMin || 0}м</span>
+            <span class="metaPill">⚡ ${levelLabel(meta.avgLevel)}</span>
+          </div>
+          <div class="taskGroupChevron">${open ? "▾" : "▸"}</div>
+        </div>
+
+        <div class="taskGroupBody" style="display:${open ? "block" : "none"}"></div>
+      `;
+
+      const head = wrap.querySelector(".taskGroupHead");
+      const body = wrap.querySelector(".taskGroupBody");
+
+      head.addEventListener("click", () => {
+        g.open = !g.open;
+        saveTasksState();
+        renderTasks();
+      });
+
+      const items = Array.isArray(g.items) ? g.items : [];
+      if (!items.length) {
+        body.innerHTML = `<div class="taskGroupEmpty">Пусто…</div>`;
+      } else {
+        items.forEach((t) => {
+          const row = document.createElement("div");
+          row.className = "taskRow" + (t.done ? " done" : "");
+
+          row.innerHTML = `
+            <label class="taskRowLeft">
+              <input type="checkbox" ${t.done ? "checked" : ""} />
+              <span class="taskRowText">${escapeHTML(t.text || "")}</span>
+            </label>
+            <div class="taskRowRight">
+              ${Number.isFinite(Number(t.min)) ? `<span class="miniMeta">⏱ ${Number(t.min)}м</span>` : ""}
+              <span class="miniMeta">⚡ ${levelLabel(Number(t.level) || 2)}</span>
+            </div>
+          `;
+
+          const cb = row.querySelector("input[type='checkbox']");
+          cb.addEventListener("change", () => {
+            t.done = !!cb.checked;
+            saveTasksState();
+            renderTasks();
+          });
+
+          body.appendChild(row);
+        });
+      }
+
+      tasksListEl.appendChild(wrap);
+    });
+  }
+
+  function clearAllTasks() {
+    tasksState = { groups: [] };
+    saveTasksState();
+    renderTasks();
+  }
+
+  on(clearTasksBtn, "click", clearAllTasks);
+
+  // =========================
+  // PLAN MODAL (Accept / Decline)
+  // =========================
+  function openPlanModal(htmlOrNode) {
     if (!planOverlay || !planModal || !planContent) return;
 
-    if (typeof contentNodeOrHTML === "string") {
-      planContent.innerHTML = contentNodeOrHTML;
+    if (typeof htmlOrNode === "string") {
+      planContent.innerHTML = htmlOrNode;
     } else {
       planContent.innerHTML = "";
-      planContent.appendChild(contentNodeOrHTML);
+      planContent.appendChild(htmlOrNode);
     }
 
     planOverlay.classList.add("open");
@@ -636,122 +685,196 @@ window.addEventListener("DOMContentLoaded", () => {
   on(closePlanBtn, "click", closePlanModal);
   on(planOverlay, "click", closePlanModal);
 
-  function renderPlanCards(cards) {
+  function normalizeCards(cards) {
+    const arr = Array.isArray(cards) ? cards : [];
+    return arr.map((c, idx) => {
+      const title = String(c?.title || `План #${idx + 1}`).trim();
+      const tasks = Array.isArray(c?.tasks) ? c.tasks : [];
+
+      const items = tasks
+        .map((t) => {
+          const text = String(t?.t || "").trim();
+          if (!text) return null;
+
+          const min = Number.isFinite(Number(t?.min)) ? Number(t.min) : null;
+          const level = energyToLevel(t?.energy);
+
+          return {
+            id: uuid(),
+            text,
+            min,
+            level,
+            done: false,
+          };
+        })
+        .filter(Boolean);
+
+      return {
+        id: uuid(),
+        title,
+        items,
+      };
+    });
+  }
+
+  function addGroupToTasks(group) {
+    if (!group?.items?.length) return;
+
+    const existing = Array.isArray(tasksState.groups) ? tasksState.groups : [];
+
+    // если уже есть группа с таким же title — просто добавим задачи внутрь (чтобы не плодить)
+    const same = existing.find((g) => String(g.title) === String(group.title));
+    if (same) {
+      same.items = [...same.items, ...group.items];
+      same.open = true;
+    } else {
+      tasksState.groups.unshift({
+        id: uuid(),
+        title: group.title,
+        items: group.items,
+        open: true,
+        createdAt: Date.now(),
+      });
+    }
+
+    saveTasksState();
+    renderTasks();
+  }
+
+  function renderPlanForAccept(cardsNormalized) {
     const wrap = document.createElement("div");
-    wrap.className = "cardsArea";
+    wrap.className = "planCards";
 
-    (cards || []).forEach((card, idx) => {
-      const box = document.createElement("div");
-      box.className = "cardBox";
+    cardsNormalized.forEach((g) => {
+      const meta = groupMeta(g);
 
-      const title = document.createElement("h3");
-      title.className = "cardTitle";
-      title.textContent = card?.title ? String(card.title) : `План #${idx + 1}`;
+      const card = document.createElement("div");
+      card.className = "planCard";
 
-      const ul = document.createElement("ul");
-      ul.className = "cardTasks";
+      card.innerHTML = `
+        <div class="planCardHead">
+          <div class="planCardTitle">${escapeHTML(g.title)}</div>
+          <div class="planCardMeta">
+            <span class="metaPill">⏱ ${meta.totalMin || 0}м</span>
+            <span class="metaPill">⚡ ${levelLabel(meta.avgLevel)}</span>
+          </div>
+        </div>
 
-      const ts = Array.isArray(card?.tasks) ? card.tasks : [];
-      ts.forEach((t) => {
-        const txt = String(t?.t || "").trim();
-        if (!txt) return;
+        <div class="planCardBody"></div>
 
-        const li = document.createElement("li");
-        li.className = "cardTask";
+        <div class="planCardActions">
+          <button class="planAcceptBtn" type="button">Принять</button>
+          <button class="planDeclineBtn" type="button">Отклонить</button>
+        </div>
+      `;
 
-        const left = document.createElement("div");
-        left.textContent = txt;
+      const body = card.querySelector(".planCardBody");
 
-        const right = document.createElement("div");
-        right.className = "taskMeta";
+      if (!g.items.length) {
+        body.innerHTML = `<div class="planEmpty">Пусто…</div>`;
+      } else {
+        g.items.forEach((t) => {
+          const row = document.createElement("div");
+          row.className = "planTaskRow";
+          row.innerHTML = `
+            <div class="planTaskText">${escapeHTML(t.text)}</div>
+            <div class="planTaskMeta">
+              ${Number.isFinite(Number(t.min)) ? `<span>⏱ ${Number(t.min)}м</span>` : ""}
+              <span>⚡ ${levelLabel(Number(t.level) || 2)}</span>
+            </div>
+          `;
+          body.appendChild(row);
+        });
+      }
 
-        const meta = [];
-        if (Number.isFinite(Number(t?.min))) meta.push(`${Number(t.min)}м`);
-        if (t?.energy) meta.push(String(t.energy));
-        right.textContent = meta.join(" • ");
+      const acceptBtn = card.querySelector(".planAcceptBtn");
+      const declineBtn = card.querySelector(".planDeclineBtn");
 
-        li.appendChild(left);
-        li.appendChild(right);
-        ul.appendChild(li);
+      acceptBtn.addEventListener("click", () => {
+        addGroupToTasks(g);
+        // убираем карточку из модалки (как “принял — она исчезла”)
+        card.remove();
+
+        // если карточек не осталось — закрываем и кидаем в задачи
+        const left = wrap.querySelectorAll(".planCard").length;
+        dbg("✅ План принят: " + g.title);
+        if (!left) {
+          closePlanModal();
+          switchScreen("tasks");
+        }
       });
 
-      box.appendChild(title);
-      box.appendChild(ul);
-      wrap.appendChild(box);
+      declineBtn.addEventListener("click", () => {
+        dbg("⛔ План отклонён: " + g.title);
+        card.remove();
+        const left = wrap.querySelectorAll(".planCard").length;
+        if (!left) closePlanModal();
+      });
+
+      wrap.appendChild(card);
     });
 
     return wrap;
   }
 
-  function renderPlanWithActions(cards) {
-    const root = document.createElement("div");
-
-    // cards
-    root.appendChild(renderPlanCards(cards));
-
-    // actions
-    const actions = document.createElement("div");
-    actions.className = "planActions";
-
-    const btnAccept = document.createElement("button");
-    btnAccept.type = "button";
-    btnAccept.className = "planBtnAccept";
-    btnAccept.textContent = "✅ Принять";
-
-    const btnDecline = document.createElement("button");
-    btnDecline.type = "button";
-    btnDecline.className = "planBtnDecline";
-    btnDecline.textContent = "❌ Отклонить";
-
-    btnAccept.addEventListener("click", () => {
-      setTasksFromCards(cards);
-      clearPlanDraft();
-      closePlanModal();
-      switchScreen("tasks");
-      dbg("✅ План принят -> задачи добавлены");
-    });
-
-    btnDecline.addEventListener("click", () => {
-      clearPlanDraft();
-      closePlanModal();
-      dbg("❌ План отклонён");
-    });
-
-    actions.appendChild(btnAccept);
-    actions.appendChild(btnDecline);
-
-    root.appendChild(actions);
-    return root;
-  }
-
-  function openDraftIfExists() {
-    if (!planDraft?.cards || !Array.isArray(planDraft.cards) || !planDraft.cards.length) return;
-    openPlanModal(renderPlanWithActions(planDraft.cards));
-  }
-
   // =========================
-  // INIT USER IN DB (on app open)
+  // CREATE PLAN (open modal with accept/decline)
   // =========================
-  async function initUserInDB() {
+  async function createPlan() {
+    if (isLoading) return;
+
     const tg_id = getTgIdOrNull();
-    dbg("initUserInDB: tg_id=" + tg_id);
-
     if (!tg_id) {
-      dbg("❌ Нет tg_id. Открыто НЕ внутри Telegram.");
+      dbg("❌ Открой внутри Telegram (нет tg_id)");
       return;
     }
 
+    if (getMessages().length < 2) {
+      dbg("🙂 Мало переписки для плана");
+      return;
+    }
+
+    isLoading = true;
+    if (planBtn) planBtn.disabled = true;
+
     try {
+      dbg("Создаю план…");
+
       const profile = loadProfile();
-      const { ok, status, data } = await postJSON(`${API_BASE}/api/user/init`, { tg_id, profile });
-      if (!ok) dbg("init error: " + (data?.error || `status_${status}`));
+      const { ok, status, data } = await postJSON(`${API_BASE}/api/plan/create`, {
+        tg_id,
+        chat_id: activeChatId,
+        profile,
+      });
+
+      if (!ok) {
+        dbg("❌ Ошибка плана: " + (data?.error || `status_${status}`));
+        // Покажем модалку, чтобы было видно
+        openPlanModal(`<div class="planError">Ошибка: ${escapeHTML(data?.error || `status_${status}`)}</div>`);
+        return;
+      }
+
+      const cards = Array.isArray(data?.cards) ? data.cards : [];
+      if (!cards.length) {
+        dbg("🙂 План пустой (0 карточек)");
+        openPlanModal(`<div class="planEmpty">План пустой. Напиши больше деталей 🙂</div>`);
+        return;
+      }
+
+      const normalized = normalizeCards(cards);
+      openPlanModal(renderPlanForAccept(normalized));
     } catch (e) {
-      dbg("❌ Ошибка initUserInDB: " + String(e?.message || e));
+      console.log("PLAN ERROR:", e);
+      dbg("❌ Не удалось подключиться к серверу");
+      openPlanModal(`<div class="planError">Не удалось подключиться к серверу.</div>`);
+    } finally {
+      isLoading = false;
+      if (planBtn) planBtn.disabled = false;
     }
   }
 
   // =========================
-  // SEND MESSAGE (ACTIVE CHAT)
+  // SEND MESSAGE
   // =========================
   async function sendMessage() {
     if (isLoading) return;
@@ -772,7 +895,6 @@ window.addEventListener("DOMContentLoaded", () => {
     isLoading = true;
     if (sendBtn) sendBtn.disabled = true;
     if (chatTypingEl) chatTypingEl.hidden = false;
-    dbg("🧠 AI печатает…");
 
     try {
       const profile = loadProfile();
@@ -801,56 +923,30 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 
   // =========================
-  // CREATE PLAN (show modal + accept/decline)
+  // INIT USER IN DB
   // =========================
-  async function createPlan() {
-    if (isLoading) return;
-
+  async function initUserInDB() {
     const tg_id = getTgIdOrNull();
+    dbg("initUserInDB: tg_id=" + tg_id);
+
     if (!tg_id) {
-      openPlanModal("<div class='historyItem'>Открой внутри Telegram (нет tg_id)</div>");
+      dbg("❌ Нет tg_id. Открыто НЕ внутри Telegram или нет user в initDataUnsafe.");
       return;
     }
-
-    if (messages().length < 2) {
-      openPlanModal("<div class='historyItem'>Мало переписки для плана 🙂</div>");
-      return;
-    }
-
-    isLoading = true;
-    if (planBtn) planBtn.disabled = true;
 
     try {
-      openPlanModal("<div class='historyItem'>Создаю план…</div>");
-
       const profile = loadProfile();
-      const { ok, status, data } = await postJSON(`${API_BASE}/api/plan/create`, {
+      dbg("➡️ /api/user/init ...");
+
+      const { ok, status, data } = await postJSON(`${API_BASE}/api/user/init`, {
         tg_id,
-        chat_id: activeChatId,
         profile,
       });
 
-      if (!ok) {
-        openPlanModal("<div class='historyItem'>Ошибка: " + (data?.error || `status_${status}`) + "</div>");
-        return;
-      }
-
-      const cards = Array.isArray(data?.cards) ? data.cards : [];
-      if (!cards.length) {
-        openPlanModal("<div class='historyItem'>План пустой. Напиши больше деталей 🙂</div>");
-        return;
-      }
-
-      // save draft (если пользователь закрыл — можно открыть снова)
-      savePlanDraft({ chat_id: activeChatId, cards, ts: Date.now() });
-
-      openPlanModal(renderPlanWithActions(cards));
+      dbg(`⬅️ init ok=${ok} status=${status}`);
+      if (!ok) dbg("init error: " + (data?.error || "unknown"));
     } catch (e) {
-      console.log("PLAN ERROR:", e);
-      openPlanModal("<div class='historyItem'>Не удалось подключиться к серверу.</div>");
-    } finally {
-      isLoading = false;
-      if (planBtn) planBtn.disabled = false;
+      dbg("❌ Ошибка initUserInDB: " + String(e?.message || e));
     }
   }
 
@@ -876,7 +972,7 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 
   // =========================
-  // MENU BUTTONS
+  // MENU + PROFILE SAVE
   // =========================
   on(menuProfile, "click", () => {
     closeDrawer();
@@ -894,11 +990,24 @@ window.addEventListener("DOMContentLoaded", () => {
     renderChatsInHistory();
   });
 
+  function saveProfileAndClose() {
+    const p = {
+      age: profileAge?.value ?? "",
+      nick: profileNick?.value ?? "",
+      bio: profileBio?.value ?? "",
+    };
+    saveProfile(p);
+    closeProfile();
+    initUserInDB();
+  }
+
+  on(closeProfileBtn, "click", saveProfileAndClose);
+  on(profileOverlay, "click", saveProfileAndClose);
+
   // =========================
   // BINDINGS
   // =========================
   on(sendBtn, "click", sendMessage);
-
   on(promptEl, "keydown", (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -925,7 +1034,7 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 
   // =========================
-  // BOOT: ensure at least 1 chat exists
+  // BOOT
   // =========================
   if (!activeChatId) {
     if (Array.isArray(chatsIndex) && chatsIndex.length) activeChatId = chatsIndex[0];
@@ -939,16 +1048,13 @@ window.addEventListener("DOMContentLoaded", () => {
   if (!chatsIndex.includes(activeChatId)) chatsIndex.unshift(activeChatId);
   saveChats();
 
-  // init UI
   initDrawerUser();
   renderTasks();
   renderMessages();
   renderChatsInHistory();
   cleanupEmptyChats();
-  switchScreen("home");
 
-  // if draft exists — allow continue (optional auto-open)
-  // openDraftIfExists();
+  switchScreen("home");
 
   console.log("[LSD] loaded. activeChatId =", activeChatId);
 });

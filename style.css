@@ -1043,21 +1043,244 @@ body,
 body::before{
   transition: filter .25s ease, opacity .25s ease;
 }
+/* ===============================
+   TASK GROUPS (оглавление + подзадачи)
+================================= */
+.taskGroup{
+  list-style:none;
+  padding:0;
+  margin:0 0 10px;
+}
 
-.msgActions{
-  margin-top: 8px;
+.taskGroupHead{
+  background: var(--card);
+  border: 1px solid var(--divider);
+  border-radius: 14px;
+  padding: 12px 12px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  cursor:pointer;
+  user-select:none;
+}
+
+.taskGroupTitle{
+  font-weight: 900;
+  color: var(--text);
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.taskGroupMeta{
   display:flex;
   gap:8px;
+  flex:0 0 auto;
 }
-.msgBtn{
-  border:0;
+
+.metaPill{
+  font-size: 12px;
+  font-weight: 900;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  border: 1px solid var(--divider);
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.taskGroupChevron{
+  opacity:.7;
+  font-weight: 900;
+  width: 18px;
+  text-align:center;
+}
+
+.taskGroupBody{
+  margin-top: 8px;
+  padding: 10px;
+  border-radius: 14px;
+  background: rgba(0,0,0,0.02);
+  border: 1px solid var(--divider);
+}
+body.dark .taskGroupBody{
+  background: rgba(255,255,255,0.04);
+}
+
+.taskRow{
+  background: var(--card);
+  border: 1px solid var(--divider);
   border-radius: 12px;
-  padding: 8px 10px;
+  padding: 10px 10px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom: 8px;
+}
+.taskRow:last-child{ margin-bottom: 0; }
+
+.taskRowLeft{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  min-width:0;
+  flex:1;
+  cursor:pointer;
+}
+
+.taskRowText{
+  color: var(--text);
+  font-weight: 700;
+  min-width:0;
+  white-space: nowrap;
+  overflow:hidden;
+  text-overflow: ellipsis;
+}
+
+.taskRowRight{
+  display:flex;
+  gap:8px;
+  flex:0 0 auto;
+  opacity:.85;
+}
+
+.miniMeta{
+  font-size: 12px;
+  font-weight: 900;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  border: 1px solid var(--divider);
+  white-space: nowrap;
+}
+
+.taskRow.done{
+  opacity:.65;
+}
+.taskRow.done .taskRowText{
+  text-decoration: line-through;
+}
+
+/* ===============================
+   PLAN MODAL (accept/decline like screenshot)
+================================= */
+.planCards{
+  display:grid;
+  gap:12px;
+}
+
+.planCard{
+  background: var(--surface-2);
+  border: 1px solid var(--divider);
+  border-radius: 16px;
+  padding: 12px;
+}
+
+.planCardHead{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom: 8px;
+}
+
+.planCardTitle{
+  font-weight: 900;
+  font-size: 16px;
+  color: var(--text);
+  line-height: 1.2;
+}
+
+.planCardMeta{
+  display:flex;
+  gap:8px;
+  flex:0 0 auto;
+}
+
+.planCardBody{
+  display:grid;
+  gap:8px;
+  margin: 10px 0 12px;
+}
+
+.planTaskRow{
+  background: var(--card);
+  border: 1px solid var(--divider);
+  border-radius: 14px;
+  padding: 10px 10px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+}
+
+.planTaskText{
+  font-weight: 700;
+  color: var(--text);
+  min-width:0;
+  flex:1;
+}
+
+.planTaskMeta{
+  display:flex;
+  gap:10px;
+  font-size: 12px;
+  font-weight: 900;
+  opacity:.75;
+  white-space: nowrap;
+}
+
+.planCardActions{
+  display:flex;
+  gap:10px;
+}
+
+.planAcceptBtn{
+  flex:1;
+  height: 44px;
+  border-radius: 14px;
+  border: 0;
+  background: var(--accent);
+  color: #fff;
   font-weight: 900;
   cursor:pointer;
 }
-.msgBtn.accept{ background: var(--accent); color:#fff; }
-.msgBtn.decline{ background: rgba(0,0,0,0.08); color: var(--text); }
-body.dark .msgBtn.decline{ background: rgba(255,255,255,0.12); }
-.msgBtn:active{ transform: scale(.99); opacity:.9; }
+
+.planDeclineBtn{
+  flex:1;
+  height: 44px;
+  border-radius: 14px;
+  border: 1px solid var(--divider);
+  background: transparent;
+  color: var(--text);
+  font-weight: 900;
+  cursor:pointer;
+}
+
+.planAcceptBtn:active,
+.planDeclineBtn:active{
+  transform: scale(.99);
+  opacity: .95;
+}
+
+.planError{
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid var(--divider);
+  background: rgba(255,0,0,0.08);
+  color: var(--text);
+  font-weight: 900;
+}
+
+.planEmpty{
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid var(--divider);
+  background: var(--surface-2);
+  color: var(--text);
+  font-weight: 900;
+}
 
