@@ -1518,6 +1518,49 @@ body.dark .taskGroupBody{
   to{ opacity: 1; transform: translateY(0); }
 }
 
+/* ===== Points Bar ===== */
+.pointsBar{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:12px 20px;
+  margin:10px 15px 10px;
+  border-radius:14px;
+  background:rgba(255,255,255,0.65);
+  backdrop-filter: blur(6px);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+}
+
+.pointsLeft{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
+.cup{
+  width:36px;
+  height:36px;
+  border-radius:12px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:30px;
+}
+
+.pointsTitle{
+  font-size:12px;
+  opacity:0.65;
+  line-height:1.1;
+}
+
+.pointsValue{
+  font-size:18px;
+  font-weight:700;
+  line-height:1.1;
+}
+
+
+
 /* =========================================
    IMPORTANT FIX:
    Если в твоём JS body ставит style="display:none/block"

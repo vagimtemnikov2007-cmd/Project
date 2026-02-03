@@ -1,4 +1,4 @@
-// LSD Front — FULL (Chats + Plan Accept/Decline + Grouped Tasks w/ meta)
+// LSD Front — FULL (Chats + Plan Accept/Decline + Grouped Tasks + Points + Sync Push/Pull)
 // Drop-in replacement for your current JavaScript.js
 
 window.addEventListener("DOMContentLoaded", () => {
@@ -23,6 +23,22 @@ window.addEventListener("DOMContentLoaded", () => {
     }[ch]));
 
   const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
+
+  function uuid() {
+    if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
+    return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+      const r = (Math.random() * 16) | 0;
+      const v = c === "x" ? r : (r & 0x3) | 0x8;
+      return v.toString(16);
+    });
+  }
+
+  function fmtTime(ts) {
+    const d = new Date(ts);
+    const hh = String(d.getHours()).padStart(2, "0");
+    const mm = String(d.getMinutes()).padStart(2, "0");
+    return `${hh}:${mm}`;
+  }
 
   // =========================
   // SAFE STORAGE (Telegram WebView fix)
@@ -68,34 +84,21 @@ window.addEventListener("DOMContentLoaded", () => {
 
   const STORAGE_PROFILE = "lsd_profile_v2";
 
+  // points
+  const STORAGE_POINTS = "lsd_points_v1";
+
   // chats
   const STORAGE_ACTIVE_CHAT = "lsd_active_chat_v3";
   const STORAGE_CHATS_INDEX = "lsd_chats_index_v1";
   const STORAGE_CHAT_CACHE = "lsd_chat_cache_v3";
 
-  // grouped tasks (NEW)
+  // grouped tasks
   const STORAGE_TASKS_GROUPS = "lsd_tasks_groups_v2"; // { groups: [...] }
 
-  const EMOJIS = ["💬","🧠","⚡","🧩","📌","🎯","🧊","🍀","🌙","☀️","🦊","🐺","🐼","🧪","📚"];
-
-  function uuid() {
-    if (crypto?.randomUUID) return crypto.randomUUID();
-    return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
-      const r = (Math.random() * 16) | 0;
-      const v = c === "x" ? r : (r & 0x3) | 0x8;
-      return v.toString(16);
-    });
-  }
+  const EMOJIS = ["💬", "🧠", "⚡", "🧩", "📌", "🎯", "🧊", "🍀", "🌙", "☀️", "🦊", "🐺", "🐼", "🧪", "📚"];
 
   function pickEmoji() {
     return EMOJIS[(Math.random() * EMOJIS.length) | 0];
-  }
-
-  function fmtTime(ts) {
-    const d = new Date(ts);
-    const hh = String(d.getHours()).padStart(2, "0");
-    const mm = String(d.getMinutes()).padStart(2, "0");
-    return `${hh}:${mm}`;
   }
 
   function getTgIdOrNull() {
@@ -105,60 +108,26 @@ window.addEventListener("DOMContentLoaded", () => {
     return Number.isFinite(n) ? n : null;
   }
 
-  let syncTimer = null;
+  // =========================
+  // POINTS UI
+  // =========================
+  let points = Number(sGet(STORAGE_POINTS, "0")) || 0;
 
-function scheduleSyncPush() {
-  clearTimeout(syncTimer);
-  syncTimer = setTimeout(syncPush, 700);
-}
+  function renderPointsBar() {
+    const val = $("pointsValue"); // optional
+    if (val) val.textContent = String(points || 0);
 
-function roleToWho(role) {
-  return role === "assistant" ? "ai" : "user";
-}
-function whoToRole(who) {
-  return who === "ai" ? "assistant" : "user";
-}
+    const bar = $("pointsBar"); // optional
+    if (bar) {
+      bar.classList.toggle("open", points > 0);
+      bar.setAttribute("aria-hidden", points > 0 ? "false" : "true");
+    }
+  }
 
-async function syncPush() {
-  const tg_id = getTgIdOrNull();
-  if (!tg_id) return;
-
-  // чаты
-  const chats_upsert = (chatsIndex || [])
-    .filter((id) => chatCache[id])
-    .map((id) => {
-      const c = chatCache[id];
-      return {
-        chat_id: id,
-        title: c?.meta?.title || "Новый чат",
-        emoji: c?.meta?.emoji || "💬",
-        updated_at: new Date(c?.meta?.updatedAt || Date.now()).toISOString(),
-      };
-    });
-
-  // сообщения (последние 80 на чат, без дублей по msg_id)
-  const messages_upsert = [];
-  (chatsIndex || []).forEach((chat_id) => {
-    const arr = (chatCache[chat_id]?.messages || []).slice(-80);
-    arr.forEach((m) => {
-      if (!m.msg_id) m.msg_id = uuid();
-      messages_upsert.push({
-        chat_id,
-        msg_id: m.msg_id,
-        role: whoToRole(m.who), // server expects role
-        content: m.text,        // server expects content
-        created_at: new Date(m.ts || Date.now()).toISOString(),
-      });
-    });
-  });
-
-  await postJSON(`${API_BASE}/api/sync/push`, {
-    tg_id,
-    chats_upsert,
-    messages_upsert,
-    tasks_state: tasksState, // server expects tasks_state
-  });
-}
+  function savePoints() {
+    sSet(STORAGE_POINTS, String(points));
+    renderPointsBar();
+  }
 
   // =========================
   // NETWORK (with timeout)
@@ -178,8 +147,8 @@ async function syncPush() {
       });
 
       const raw = await res.text();
-
       let data = null;
+
       try {
         data = raw ? JSON.parse(raw) : null;
       } catch {
@@ -189,11 +158,7 @@ async function syncPush() {
       dbg(`⬅️ status=${res.status} ok=${res.ok}`);
       return { ok: res.ok, status: res.status, data };
     } catch (e) {
-      const msg =
-        e?.name === "AbortError"
-          ? `timeout_${timeoutMs}ms`
-          : String(e?.message || e);
-
+      const msg = e?.name === "AbortError" ? `timeout_${timeoutMs}ms` : String(e?.message || e);
       dbg("❌ fetch error: " + msg);
       return { ok: false, status: 0, data: { error: msg } };
     } finally {
@@ -202,7 +167,7 @@ async function syncPush() {
   }
 
   // =========================
-  // ELEMENTS (your existing ids/classes)
+  // ELEMENTS
   // =========================
   const settingsBtn = document.querySelector(".settings_bt");
   const drawer = $("settingsDrawer");
@@ -222,7 +187,6 @@ async function syncPush() {
   const chatTypingEl = $("chatTyping");
 
   const planBtn = $("planBtn");
-
   const userEl = $("user");
 
   // drawer top user
@@ -238,7 +202,7 @@ async function syncPush() {
   const menuHistory = $("menuHistory");
   const menuSettings = $("menuSettings");
 
-  // history list container (chats)
+  // history list
   const historyList = $("historyList");
   const clearHistoryBtn = $("clearHistory");
 
@@ -252,7 +216,7 @@ async function syncPush() {
   const profileNick = $("profileNick");
   const profileBio = $("profileBio");
 
-  // plan modal (we will use accept/decline there)
+  // plan modal
   const planOverlay = $("planOverlay");
   const planModal = $("planModal");
   const planContent = $("planContent");
@@ -275,6 +239,149 @@ async function syncPush() {
 
   // grouped tasks
   let tasksState = sJSONGet(STORAGE_TASKS_GROUPS, { groups: [] });
+
+  // =========================
+  // SYNC (push / pull)
+  // =========================
+  let syncTimer = null;
+
+  function scheduleSyncPush() {
+    clearTimeout(syncTimer);
+    syncTimer = setTimeout(syncPush, 700);
+  }
+
+  function roleToWho(role) {
+    return role === "assistant" ? "ai" : "user";
+  }
+  function whoToRole(who) {
+    return who === "ai" ? "assistant" : "user";
+  }
+
+  async function syncPush() {
+    const tg_id = getTgIdOrNull();
+    if (!tg_id) return;
+
+    const chats_upsert = (chatsIndex || [])
+      .filter((id) => chatCache[id])
+      .map((id) => {
+        const c = chatCache[id];
+        return {
+          chat_id: id,
+          title: c?.meta?.title || "Новый чат",
+          emoji: c?.meta?.emoji || "💬",
+          updated_at: new Date(c?.meta?.updatedAt || Date.now()).toISOString(),
+        };
+      });
+
+    const messages_upsert = [];
+    (chatsIndex || []).forEach((chat_id) => {
+      const arr = (chatCache[chat_id]?.messages || []).slice(-80);
+      arr.forEach((m) => {
+        if (!m.msg_id) m.msg_id = uuid();
+        messages_upsert.push({
+          chat_id,
+          msg_id: m.msg_id,
+          role: whoToRole(m.who),
+          content: m.text,
+          created_at: new Date(m.ts || Date.now()).toISOString(),
+        });
+      });
+    });
+
+    await postJSON(`${API_BASE}/api/sync/push`, {
+      tg_id,
+      chats_upsert,
+      messages_upsert,
+      tasks_state: tasksState,
+      points,
+    });
+  }
+
+  async function syncPull() {
+    const tg_id = getTgIdOrNull();
+    if (!tg_id) return;
+
+    const { ok, data } = await postJSON(`${API_BASE}/api/sync/pull`, { tg_id });
+    if (!ok) return;
+
+    // chats
+    if (Array.isArray(data?.chats)) {
+      data.chats.forEach((c) => {
+        const id = c.chat_id;
+        if (!id) return;
+
+        if (!chatCache[id]) chatCache[id] = { meta: {}, messages: [] };
+        chatCache[id].meta = {
+          title: c.title || "Новый чат",
+          emoji: c.emoji || "💬",
+          updatedAt: new Date(c.updated_at || Date.now()).getTime(),
+        };
+
+        if (!chatsIndex.includes(id)) chatsIndex.push(id);
+        ensureChat(id);
+      });
+    }
+
+    // messages
+    if (Array.isArray(data?.messages)) {
+      const byChat = new Map();
+
+      data.messages.forEach((m) => {
+        const chat_id = m.chat_id;
+        if (!chat_id) return;
+
+        if (!byChat.has(chat_id)) byChat.set(chat_id, []);
+        byChat.get(chat_id).push({
+          msg_id: m.msg_id,
+          who: roleToWho(m.role),
+          text: m.content,
+          ts: new Date(m.created_at || Date.now()).getTime(),
+        });
+      });
+
+      byChat.forEach((arr, chat_id) => {
+        ensureChat(chat_id);
+
+        const existing = new Set((chatCache[chat_id].messages || []).map((x) => x.msg_id).filter(Boolean));
+
+        arr.forEach((x) => {
+          if (!x.msg_id) x.msg_id = uuid();
+          if (!existing.has(x.msg_id)) chatCache[chat_id].messages.push(x);
+        });
+
+        chatCache[chat_id].messages.sort((a, b) => (a.ts || 0) - (b.ts || 0));
+
+        const last = chatCache[chat_id].messages[chatCache[chat_id].messages.length - 1];
+        if (last?.ts) chatCache[chat_id].meta.updatedAt = last.ts;
+      });
+    }
+
+    // tasks_state
+    if (data?.tasks_state && typeof data.tasks_state === "object") {
+      tasksState = data.tasks_state;
+      saveTasksState();
+    }
+
+    // points
+    if (Number.isFinite(Number(data?.points))) {
+      points = Number(data.points);
+      savePoints();
+    }
+
+    // order chats by freshness
+    chatsIndex = chatsIndex
+      .filter((id) => chatCache[id])
+      .sort((a, b) => (chatCache[b].meta.updatedAt || 0) - (chatCache[a].meta.updatedAt || 0));
+
+    if (!activeChatId || !chatCache[activeChatId]) {
+      activeChatId = chatsIndex[0] || activeChatId;
+    }
+
+    saveChats();
+    renderTasks();
+    renderChatsInHistory();
+    renderMessages();
+  }
 
   // =========================
   // UI: SCREEN SWITCH
@@ -352,7 +459,7 @@ async function syncPush() {
   });
 
   // =========================
-  // DRAWER OPEN/CLOSE
+  // DRAWER
   // =========================
   function openDrawer() {
     drawer?.classList.add("open");
@@ -422,7 +529,7 @@ async function syncPush() {
   }
 
   function cleanupEmptyChats() {
-    const userIsInChatNow = (currentScreen === "chat");
+    const userIsInChatNow = currentScreen === "chat";
 
     const toDelete = chatsIndex.filter((id) => {
       ensureChat(id);
@@ -488,33 +595,32 @@ async function syncPush() {
     createNewChat();
   }
 
-function pushMsg(who, text) {
-  if (!activeChatId) createNewChat();
+  function pushMsg(who, text) {
+    if (!activeChatId) createNewChat();
 
-  const c = getActiveChat();
-  const msg = {
-    msg_id: uuid(),               // важно для синка
-    who,                          // "user" | "ai"
-    text: String(text ?? ""),
-    ts: Date.now(),
-  };
+    const c = getActiveChat();
+    const msg = {
+      msg_id: uuid(),
+      who, // "user" | "ai"
+      text: String(text ?? ""),
+      ts: Date.now(),
+    };
 
-  c.messages.push(msg);
+    c.messages.push(msg);
 
-  c.meta.updatedAt = Date.now();
-  if (c.meta.title === "Новый чат" && who === "user") {
-    c.meta.title = makeChatTitleFromText(text);
+    c.meta.updatedAt = Date.now();
+    if (c.meta.title === "Новый чат" && who === "user") {
+      c.meta.title = makeChatTitleFromText(text);
+    }
+
+    bumpChatToTop(activeChatId);
+    saveChats();
+
+    renderMessages();
+    renderChatsInHistory();
+
+    scheduleSyncPush();
   }
-
-  bumpChatToTop(activeChatId);
-  saveChats();
-
-  renderMessages();
-  renderChatsInHistory();
-
-  scheduleSyncPush(); // 🔥 пушим изменения на сервер
-}
-
 
   // =========================
   // RENDER MESSAGES
@@ -599,7 +705,7 @@ function pushMsg(who, text) {
   }
 
   // =========================
-  // TASKS (Grouped)
+  // TASKS (Grouped) + "SUBMIT" => POINTS
   // =========================
   function saveTasksState() {
     sJSONSet(STORAGE_TASKS_GROUPS, tasksState);
@@ -607,14 +713,12 @@ function pushMsg(who, text) {
 
   function energyToLevel(energy) {
     const e = String(energy || "").toLowerCase();
-    if (!e) return 2; // средняя по умолчанию
+    if (!e) return 2;
 
-    // варианты которые часто встречаются
     if (e.includes("low") || e.includes("легк") || e.includes("easy")) return 1;
     if (e.includes("high") || e.includes("тяж") || e.includes("hard")) return 3;
     if (e.includes("med") || e.includes("сред")) return 2;
 
-    // если прилетело типа "⚡⚡⚡"
     const bolts = (String(energy).match(/⚡/g) || []).length;
     if (bolts) return clamp(bolts, 1, 3);
 
@@ -634,7 +738,20 @@ function pushMsg(who, text) {
       ? Math.round(items.reduce((s, t) => s + (Number(t.level) || 2), 0) / items.length)
       : 2;
 
-    return { totalMin, avgLevel };
+    const doneCount = items.reduce((s, t) => s + (t.done ? 1 : 0), 0);
+    const allDone = items.length > 0 && doneCount === items.length;
+
+    return { totalMin, avgLevel, doneCount, allDone, itemsCount: items.length };
+  }
+
+  function calcGroupPoints(g) {
+    // простая формула:
+    // +1 за каждую задачу
+    // + ещё 1 за каждые 30 минут суммарно (min)
+    const meta = groupMeta(g);
+    const p1 = meta.itemsCount;
+    const p2 = Math.max(0, Math.floor((meta.totalMin || 0) / 30));
+    return Math.max(1, p1 + p2);
   }
 
   function renderTasks() {
@@ -653,20 +770,27 @@ function pushMsg(who, text) {
 
     groups.forEach((g) => {
       const meta = groupMeta(g);
+      const open = !!g.open;
+      const submitted = !!g.submitted;
 
       const wrap = document.createElement("li");
       wrap.className = "taskGroup";
       wrap.dataset.groupId = g.id;
 
-      const open = !!g.open;
+      // submit visible only when all done AND not submitted
+      const showSubmit = meta.allDone && !submitted;
+      const groupPoints = calcGroupPoints(g);
 
       wrap.innerHTML = `
         <div class="taskGroupHead ${open ? "open" : ""}">
           <div class="taskGroupTitle">${escapeHTML(g.title || "План")}</div>
+
           <div class="taskGroupMeta">
             <span class="metaPill">⏱ ${meta.totalMin || 0}м</span>
             <span class="metaPill">⚡ ${levelLabel(meta.avgLevel)}</span>
+            <span class="metaPill">✅ ${meta.doneCount}/${meta.itemsCount}</span>
           </div>
+
           <div class="taskGroupChevron">${open ? "▾" : "▸"}</div>
         </div>
 
@@ -682,9 +806,43 @@ function pushMsg(who, text) {
         renderTasks();
       });
 
+      // submit bar (top inside body)
+      if (submitted) {
+        const okBar = document.createElement("div");
+        okBar.className = "taskSubmitBar done";
+        okBar.innerHTML = `🏆 Сдано • +${groupPoints} очков`;
+        body.appendChild(okBar);
+      } else if (showSubmit) {
+        const bar = document.createElement("button");
+        bar.type = "button";
+        bar.className = "taskSubmitBar";
+        bar.textContent = `🏁 Сдать задание (+${groupPoints} очков)`;
+        bar.addEventListener("click", (ev) => {
+          ev.stopPropagation();
+
+          // защита от двойного клика
+          if (g.submitted) return;
+
+          g.submitted = true;
+          points += groupPoints;
+          savePoints();
+
+          saveTasksState();
+          renderTasks();
+          scheduleSyncPush();
+
+          dbg(`🏆 +${groupPoints} очков`);
+        });
+        body.appendChild(bar);
+      }
+
+      // tasks list
       const items = Array.isArray(g.items) ? g.items : [];
       if (!items.length) {
-        body.innerHTML = `<div class="taskGroupEmpty">Пусто…</div>`;
+        const empty = document.createElement("div");
+        empty.className = "taskGroupEmpty";
+        empty.textContent = "Пусто…";
+        body.appendChild(empty);
       } else {
         items.forEach((t) => {
           const row = document.createElement("div");
@@ -702,13 +860,17 @@ function pushMsg(who, text) {
           `;
 
           const cb = row.querySelector("input[type='checkbox']");
-cb.addEventListener("change", () => {
-  t.done = !!cb.checked;
-  saveTasksState();
-  renderTasks();
-  scheduleSyncPush();
-});
+          cb.addEventListener("change", () => {
+            t.done = !!cb.checked;
 
+            // если пользователь снял галочку — снимаем "submitted"
+            // (иначе можно сдать и потом поменять)
+            if (!t.done) g.submitted = false;
+
+            saveTasksState();
+            renderTasks();
+            scheduleSyncPush();
+          });
 
           body.appendChild(row);
         });
@@ -722,6 +884,7 @@ cb.addEventListener("change", () => {
     tasksState = { groups: [] };
     saveTasksState();
     renderTasks();
+    scheduleSyncPush();
   }
 
   on(clearTasksBtn, "click", clearAllTasks);
@@ -775,11 +938,7 @@ cb.addEventListener("change", () => {
         })
         .filter(Boolean);
 
-      return {
-        id: uuid(),
-        title,
-        items,
-      };
+      return { id: uuid(), title, items };
     });
   }
 
@@ -787,12 +946,12 @@ cb.addEventListener("change", () => {
     if (!group?.items?.length) return;
 
     const existing = Array.isArray(tasksState.groups) ? tasksState.groups : [];
-
-    // если уже есть группа с таким же title — просто добавим задачи внутрь (чтобы не плодить)
     const same = existing.find((g) => String(g.title) === String(group.title));
+
     if (same) {
       same.items = [...same.items, ...group.items];
       same.open = true;
+      same.submitted = false;
     } else {
       tasksState.groups.unshift({
         id: uuid(),
@@ -800,6 +959,7 @@ cb.addEventListener("change", () => {
         items: group.items,
         open: true,
         createdAt: Date.now(),
+        submitted: false,
       });
     }
 
@@ -859,10 +1019,8 @@ cb.addEventListener("change", () => {
 
       acceptBtn.addEventListener("click", () => {
         addGroupToTasks(g);
-        // убираем карточку из модалки (как “принял — она исчезла”)
         card.remove();
 
-        // если карточек не осталось — закрываем и кидаем в задачи
         const left = wrap.querySelectorAll(".planCard").length;
         dbg("✅ План принят: " + g.title);
         if (!left) {
@@ -885,7 +1043,7 @@ cb.addEventListener("change", () => {
   }
 
   // =========================
-  // CREATE PLAN (open modal with accept/decline)
+  // CREATE PLAN
   // =========================
   async function createPlan() {
     if (isLoading) return;
@@ -916,7 +1074,6 @@ cb.addEventListener("change", () => {
 
       if (!ok) {
         dbg("❌ Ошибка плана: " + (data?.error || `status_${status}`));
-        // Покажем модалку, чтобы было видно
         openPlanModal(`<div class="planError">Ошибка: ${escapeHTML(data?.error || `status_${status}`)}</div>`);
         return;
       }
@@ -951,7 +1108,7 @@ cb.addEventListener("change", () => {
 
     switchScreen("chat");
     pushMsg("user", text);
-    
+
     if (promptEl) promptEl.value = "";
 
     const tg_id = getTgIdOrNull();
@@ -966,17 +1123,16 @@ cb.addEventListener("change", () => {
 
     try {
       const profile = loadProfile();
-const last = getMessages().slice(-1)[0];
-const msg_id = last?.msg_id; // тот что сгенерился в pushMsg
+      const last = getMessages().slice(-1)[0];
+      const msg_id = last?.msg_id;
 
-const { ok, status, data } = await postJSON(`${API_BASE}/api/chat/send`, {
-  tg_id,
-  chat_id: activeChatId,
-  text,
-  profile,
-  msg_id, // ✅ добавили
-});
-
+      const { ok, status, data } = await postJSON(`${API_BASE}/api/chat/send`, {
+        tg_id,
+        chat_id: activeChatId,
+        text,
+        profile,
+        msg_id,
+      });
 
       if (!ok) {
         pushMsg("ai", "Ошибка сервера: " + (data?.error || `status_${status}`));
@@ -992,11 +1148,10 @@ const { ok, status, data } = await postJSON(`${API_BASE}/api/chat/send`, {
       if (sendBtn) sendBtn.disabled = false;
       if (chatTypingEl) chatTypingEl.hidden = true;
     }
-    
   }
 
   // =========================
-  // INIT USER IN DB
+  // USER INIT (optional)
   // =========================
   async function initUserInDB() {
     const tg_id = getTgIdOrNull();
@@ -1011,10 +1166,7 @@ const { ok, status, data } = await postJSON(`${API_BASE}/api/chat/send`, {
       const profile = loadProfile();
       dbg("➡️ /api/user/init ...");
 
-      const { ok, status, data } = await postJSON(`${API_BASE}/api/user/init`, {
-        tg_id,
-        profile,
-      });
+      const { ok, status, data } = await postJSON(`${API_BASE}/api/user/init`, { tg_id, profile });
 
       dbg(`⬅️ init ok=${ok} status=${status}`);
       if (!ok) dbg("init error: " + (data?.error || "unknown"));
@@ -1022,91 +1174,6 @@ const { ok, status, data } = await postJSON(`${API_BASE}/api/chat/send`, {
       dbg("❌ Ошибка initUserInDB: " + String(e?.message || e));
     }
   }
-async function syncPull() {
-  const tg_id = getTgIdOrNull();
-  if (!tg_id) return;
-
-  const { ok, data } = await postJSON(`${API_BASE}/api/sync/pull`, { tg_id });
-  if (!ok) return;
-
-  // 1) чаты
-  if (Array.isArray(data?.chats)) {
-    data.chats.forEach((c) => {
-      const id = c.chat_id;
-      if (!id) return;
-
-      if (!chatCache[id]) chatCache[id] = { meta: {}, messages: [] };
-      chatCache[id].meta = {
-        title: c.title || "Новый чат",
-        emoji: c.emoji || "💬",
-        updatedAt: new Date(c.updated_at || Date.now()).getTime(),
-      };
-
-      if (!chatsIndex.includes(id)) chatsIndex.push(id);
-      ensureChat(id);
-    });
-  }
-
-  // 2) сообщения (server: role/content/created_at)
-  if (Array.isArray(data?.messages)) {
-    const byChat = new Map();
-
-    data.messages.forEach((m) => {
-      const chat_id = m.chat_id;
-      if (!chat_id) return;
-
-      if (!byChat.has(chat_id)) byChat.set(chat_id, []);
-      byChat.get(chat_id).push({
-        msg_id: m.msg_id,
-        who: roleToWho(m.role),
-        text: m.content,
-        ts: new Date(m.created_at || Date.now()).getTime(),
-      });
-    });
-
-    byChat.forEach((arr, chat_id) => {
-      ensureChat(chat_id);
-
-      const existing = new Set(
-        (chatCache[chat_id].messages || []).map((x) => x.msg_id).filter(Boolean),
-      );
-
-      arr.forEach((x) => {
-        if (!x.msg_id) x.msg_id = uuid();
-        if (!existing.has(x.msg_id)) chatCache[chat_id].messages.push(x);
-      });
-
-      // сортировка сообщений по времени (важно)
-      chatCache[chat_id].messages.sort((a, b) => (a.ts || 0) - (b.ts || 0));
-
-      // updatedAt чата = время последнего сообщения
-      const last = chatCache[chat_id].messages[chatCache[chat_id].messages.length - 1];
-      if (last?.ts) chatCache[chat_id].meta.updatedAt = last.ts;
-    });
-  }
-
-  // 3) задачи (server: tasks_state)
-  if (data?.tasks_state && typeof data.tasks_state === "object") {
-    tasksState = data.tasks_state;
-    saveTasksState(); // локальный кэш
-  }
-
-  // 4) индекс чатов по свежести
-  chatsIndex = chatsIndex
-    .filter((id) => chatCache[id])
-    .sort((a, b) => (chatCache[b].meta.updatedAt || 0) - (chatCache[a].meta.updatedAt || 0));
-
-  // активный чат
-  if (!activeChatId || !chatCache[activeChatId]) {
-    activeChatId = chatsIndex[0] || activeChatId;
-  }
-
-  saveChats();
-  renderTasks();
-  renderChatsInHistory();
-  renderMessages();
-}
-
 
   // =========================
   // DRAWER USER INFO INIT
@@ -1146,6 +1213,7 @@ async function syncPull() {
   on(clearHistoryBtn, "click", () => {
     resetAllChats();
     renderChatsInHistory();
+    scheduleSyncPush();
   });
 
   function saveProfileAndClose() {
@@ -1177,22 +1245,6 @@ async function syncPull() {
   on(planBtn, "click", createPlan);
 
   // =========================
-  // TELEGRAM INIT
-  // =========================
-  const tg = window.Telegram?.WebApp;
-  if (tg) {
-    tg.ready();
-    tg.expand();
-
-    const u = tg.initDataUnsafe?.user;
-    if (userEl) userEl.textContent = "Привет, " + (u?.first_name || "друг");
-
-    initUserInDB();
-  } else {
-    if (userEl) userEl.textContent = "Открой внутри Telegram WebApp 🙂";
-  }
-
-  // =========================
   // BOOT
   // =========================
   if (!activeChatId) {
@@ -1208,12 +1260,27 @@ async function syncPull() {
   saveChats();
 
   initDrawerUser();
+  renderPointsBar();
   renderTasks();
   renderMessages();
   renderChatsInHistory();
   cleanupEmptyChats();
 
   switchScreen("home");
+
+  // Telegram init
+  const tg = window.Telegram?.WebApp;
+  if (tg) {
+    tg.ready();
+    tg.expand();
+
+    const u = tg.initDataUnsafe?.user;
+    if (userEl) userEl.textContent = "Привет, " + (u?.first_name || "друг");
+    initUserInDB();
+  } else {
+    if (userEl) userEl.textContent = "Открой внутри Telegram WebApp 🙂";
+  }
+
   syncPull();
   setInterval(syncPull, 30000);
 
