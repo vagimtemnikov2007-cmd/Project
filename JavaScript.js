@@ -1,5 +1,5 @@
-// LSD Front — FULL (init user on open + chat + plan)
-// Drop-in replacement for your current file
+// LSD Front — OLD UI + Chats list in tgHistoryScroll (historyList)
+// Drop-in replacement for your current JavaScript.js
 
 window.addEventListener("DOMContentLoaded", () => {
   // =========================
@@ -7,6 +7,11 @@ window.addEventListener("DOMContentLoaded", () => {
   // =========================
   const $ = (id) => document.getElementById(id);
   const on = (el, ev, fn) => el && el.addEventListener(ev, fn);
+
+  const debugLine = $("debugLine");
+  const dbg = (msg) => {
+    if (debugLine) debugLine.textContent = String(msg);
+  };
 
   // =========================
   // SAFE STORAGE (Telegram WebView fix)
@@ -50,9 +55,15 @@ window.addEventListener("DOMContentLoaded", () => {
   // =========================
   const API_BASE = "https://lsd-server-ml3z.onrender.com";
 
+  // profile
   const STORAGE_PROFILE = "lsd_profile_v2";
-  const STORAGE_ACTIVE_CHAT = "lsd_active_chat_v2";
-  const STORAGE_CHAT_CACHE = "lsd_chat_cache_v2";
+
+  // chats
+  const STORAGE_ACTIVE_CHAT = "lsd_active_chat_v3";
+  const STORAGE_CHATS_INDEX = "lsd_chats_index_v1"; // array of chatIds
+  const STORAGE_CHAT_CACHE = "lsd_chat_cache_v3";   // { chatId: { meta, messages } }
+
+  const EMOJIS = ["💬","🧠","⚡","🧩","📌","🎯","🧊","🍀","🌙","☀️","🦊","🐺","🐼","🧪","📚"];
 
   function uuid() {
     if (crypto?.randomUUID) return crypto.randomUUID();
@@ -61,6 +72,17 @@ window.addEventListener("DOMContentLoaded", () => {
       const v = c === "x" ? r : (r & 0x3) | 0x8;
       return v.toString(16);
     });
+  }
+
+  function pickEmoji() {
+    return EMOJIS[(Math.random() * EMOJIS.length) | 0];
+  }
+
+  function fmtTime(ts) {
+    const d = new Date(ts);
+    const hh = String(d.getHours()).padStart(2, "0");
+    const mm = String(d.getMinutes()).padStart(2, "0");
+    return `${hh}:${mm}`;
   }
 
   function getTgIdOrNull() {
@@ -89,8 +111,12 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 
   // =========================
-  // ELEMENTS
+  // ELEMENTS (your old UI)
   // =========================
+  const settingsBtn = document.querySelector(".settings_bt");
+  const drawer = $("settingsDrawer");
+  const drawerOverlay = $("drawerOverlay");
+
   const screenHome = $("screen-home");
   const screenTasks = $("screen-tasks");
   const screenChat = $("screen-chat");
@@ -111,7 +137,33 @@ window.addEventListener("DOMContentLoaded", () => {
   const closePlanBtn = $("closePlan");
 
   const userEl = $("user");
-  const avatarEl = $("avatar");
+
+  // drawer top user
+  const drawerName = $("drawerName");
+  const drawerPhone = $("drawerPhone");
+  const drawerAvatar = $("drawerAvatar");
+
+  // theme mini btn
+  const themeMiniBtn = $("themeMiniBtn");
+
+  // drawer menu
+  const menuProfile = $("menuProfile");
+  const menuHistory = $("menuHistory");
+  const menuSettings = $("menuSettings");
+
+  // history list container (we will render CHATS here)
+  const historyList = $("historyList");
+  const clearHistoryBtn = $("clearHistory");
+
+  // profile modal
+  const profileModal = $("profileModal");
+  const profileOverlay = $("profileOverlay");
+  const closeProfileBtn = $("closeProfile");
+
+  const profileName = $("profileName");
+  const profileAge = $("profileAge");
+  const profileNick = $("profileNick");
+  const profileBio = $("profileBio");
 
   // =========================
   // UI: SCREEN SWITCH
@@ -134,7 +186,6 @@ window.addEventListener("DOMContentLoaded", () => {
     el && el.classList.add("active");
 
     currentScreen = name;
-    document.body.classList.toggle("chat-mode", name === "chat");
     setNavLabel();
     updatePlanVisibility();
     if (name === "chat") scrollToBottom();
@@ -149,41 +200,172 @@ window.addEventListener("DOMContentLoaded", () => {
   // PROFILE
   // =========================
   function loadProfile() {
-    return sJSONGet(STORAGE_PROFILE, { age: null, nick: "", bio: "" });
+    return sJSONGet(STORAGE_PROFILE, { age: "", nick: "", bio: "" });
+  }
+
+  function saveProfile(p) {
+    sJSONSet(STORAGE_PROFILE, p);
+  }
+
+  function openProfile() {
+    if (!profileModal || !profileOverlay) return;
+    profileModal.classList.add("open");
+    profileOverlay.classList.add("open");
+    profileModal.setAttribute("aria-hidden", "false");
+  }
+
+  function closeProfile() {
+    if (!profileModal || !profileOverlay) return;
+    profileModal.classList.remove("open");
+    profileOverlay.classList.remove("open");
+    profileModal.setAttribute("aria-hidden", "true");
   }
 
   // =========================
-  // CHAT STATE
+  // THEME
+  // =========================
+  function syncThemeIcon() {
+    const isDark = document.body.classList.contains("dark");
+    if (themeMiniBtn) themeMiniBtn.textContent = isDark ? "☀️" : "🌙";
+  }
+
+  on(themeMiniBtn, "click", () => {
+    document.body.classList.toggle("dark");
+    syncThemeIcon();
+  });
+
+  // =========================
+  // DRAWER OPEN/CLOSE
+  // =========================
+  function openDrawer() {
+    drawer?.classList.add("open");
+    drawerOverlay?.classList.add("open");
+    drawer?.setAttribute("aria-hidden", "false");
+    renderChatsInHistory(); // render chats list every time drawer opens
+  }
+
+  function closeDrawer() {
+    drawer?.classList.remove("open");
+    drawerOverlay?.classList.remove("open");
+    drawer?.setAttribute("aria-hidden", "true");
+  }
+
+  on(settingsBtn, "click", openDrawer);
+  on(drawerOverlay, "click", closeDrawer);
+
+  // =========================
+  // CHAT STORAGE (MULTI-CHAT)
   // =========================
   let activeChatId = sGet(STORAGE_ACTIVE_CHAT, "");
-  if (!activeChatId) {
-    activeChatId = uuid();
-    sSet(STORAGE_ACTIVE_CHAT, activeChatId);
+  let chatsIndex = sJSONGet(STORAGE_CHATS_INDEX, []);
+  let chatCache = sJSONGet(STORAGE_CHAT_CACHE, {});
+
+  function ensureChat(id) {
+    if (!chatCache[id]) {
+      chatCache[id] = {
+        meta: { title: "Новый чат", emoji: pickEmoji(), updatedAt: Date.now() },
+        messages: [],
+      };
+    } else {
+      // migrate old shape
+      if (!chatCache[id].meta) {
+        chatCache[id].meta = { title: "Новый чат", emoji: pickEmoji(), updatedAt: Date.now() };
+      }
+      if (!Array.isArray(chatCache[id].messages) && Array.isArray(chatCache[id].messages?.messages)) {
+        // just in case some weird nesting
+        chatCache[id].messages = chatCache[id].messages.messages;
+      }
+      if (!Array.isArray(chatCache[id].messages)) chatCache[id].messages = [];
+      if (!chatCache[id].meta.updatedAt) chatCache[id].meta.updatedAt = Date.now();
+      if (!chatCache[id].meta.emoji) chatCache[id].meta.emoji = pickEmoji();
+      if (!chatCache[id].meta.title) chatCache[id].meta.title = "Новый чат";
+    }
   }
 
-  const chatCache = sJSONGet(STORAGE_CHAT_CACHE, {});
-  if (!chatCache[activeChatId]) chatCache[activeChatId] = { messages: [] };
-
-  function saveCache() {
+  function saveChats() {
+    sSet(STORAGE_ACTIVE_CHAT, activeChatId);
+    sJSONSet(STORAGE_CHATS_INDEX, chatsIndex);
     sJSONSet(STORAGE_CHAT_CACHE, chatCache);
   }
 
+  function setActiveChat(id) {
+    activeChatId = id;
+    ensureChat(activeChatId);
+    if (!chatsIndex.includes(activeChatId)) chatsIndex.unshift(activeChatId);
+    bumpChatToTop(activeChatId);
+    saveChats();
+
+    renderMessages();
+    renderChatsInHistory();
+  }
+
+  function bumpChatToTop(id) {
+    chatsIndex = [id, ...chatsIndex.filter((x) => x !== id)];
+  }
+
+  function getActiveChat() {
+    ensureChat(activeChatId);
+    return chatCache[activeChatId];
+  }
+
   function messages() {
-    return chatCache[activeChatId]?.messages || [];
+    if (!activeChatId) return [];
+    return getActiveChat().messages || [];
+  }
+
+  function createNewChat() {
+    const id = uuid();
+    chatCache[id] = {
+      meta: { title: "Новый чат", emoji: pickEmoji(), updatedAt: Date.now() },
+      messages: [],
+    };
+    chatsIndex = [id, ...chatsIndex.filter((x) => x !== id)];
+    setActiveChat(id);
+  }
+
+  function resetAllChats() {
+    chatCache = {};
+    chatsIndex = [];
+    activeChatId = "";
+    saveChats();
+    // create a fresh one
+    createNewChat();
+  }
+
+  function makeChatTitleFromText(text) {
+    const t = String(text || "").trim();
+    if (!t) return "Новый чат";
+    return t.length > 22 ? t.slice(0, 22) + "…" : t;
   }
 
   function pushMsg(who, text) {
+    if (!activeChatId) createNewChat();
+
+    const c = getActiveChat();
     const msg = { who, text: String(text ?? ""), ts: Date.now() };
-    chatCache[activeChatId].messages.push(msg);
-    saveCache();
+    c.messages.push(msg);
+
+    c.meta.updatedAt = Date.now();
+    if (c.meta.title === "Новый чат" && who === "user") {
+      c.meta.title = makeChatTitleFromText(text);
+    }
+
+    bumpChatToTop(activeChatId);
+    saveChats();
+
     renderMessages();
+    renderChatsInHistory();
   }
 
+  // =========================
+  // RENDER MESSAGES (ACTIVE CHAT)
+  // =========================
   function renderMessages() {
     if (!chatMessagesEl) return;
     chatMessagesEl.innerHTML = "";
 
-    messages().forEach((m) => {
+    const arr = messages();
+    arr.forEach((m) => {
       const div = document.createElement("div");
       div.className = "msg " + (m.who === "user" ? "user" : "ai");
       div.textContent = m.text;
@@ -198,6 +380,84 @@ window.addEventListener("DOMContentLoaded", () => {
     if (!planBtn) return;
     const enough = messages().length >= 2;
     planBtn.hidden = !(currentScreen === "chat" && enough);
+  }
+
+  // =========================
+  // RENDER CHATS INSIDE tgHistoryScroll (#historyList)
+  // =========================
+  function renderChatsInHistory() {
+    if (!historyList) return;
+
+    historyList.innerHTML = "";
+
+    // 1) "New chat" row (inside history, not on home)
+    const newRow = document.createElement("div");
+    newRow.className = "tgChatRow";
+    newRow.innerHTML = `
+      <div class="tgEmojiAvatar">➕</div>
+      <div class="tgChatMid">
+        <div class="tgChatTitle">Новый чат</div>
+        <div class="tgChatLast">Создать новый диалог</div>
+      </div>
+      <div class="tgChatRight">
+        <div class="tgChatTime"></div>
+      </div>
+    `;
+    newRow.addEventListener("click", () => {
+      createNewChat();
+      closeDrawer();
+      switchScreen("chat");
+    });
+    historyList.appendChild(newRow);
+
+    // divider line effect using border in rows already
+    if (!chatsIndex.length) {
+      // no chats yet
+      const empty = document.createElement("div");
+      empty.className = "histMsg ai";
+      empty.textContent = "История чатов пустая 🙂";
+      historyList.appendChild(empty);
+      return;
+    }
+
+    // 2) actual chat rows
+    chatsIndex.forEach((id) => {
+      ensureChat(id);
+      const c = chatCache[id];
+      const last = c.messages[c.messages.length - 1];
+
+      const row = document.createElement("div");
+      row.className = "tgChatRow";
+      if (id === activeChatId) row.style.background = "rgba(0,0,0,0.03)";
+
+      const unread = ""; // можно позже сделать счётчик непрочитанных
+
+      row.innerHTML = `
+        <div class="tgEmojiAvatar">${c.meta.emoji || "💬"}</div>
+        <div class="tgChatMid">
+          <div class="tgChatTitle">${escapeHTML(c.meta.title || "Новый чат")}</div>
+          <div class="tgChatLast">${escapeHTML(last ? last.text : "Пусто…")}</div>
+        </div>
+        <div class="tgChatRight">
+          <div class="tgChatTime">${fmtTime(c.meta.updatedAt || Date.now())}</div>
+          ${unread}
+        </div>
+      `;
+
+      row.addEventListener("click", () => {
+        setActiveChat(id);
+        closeDrawer();
+        switchScreen("chat");
+      });
+
+      historyList.appendChild(row);
+    });
+  }
+
+  function escapeHTML(s) {
+    return String(s).replace(/[&<>"']/g, (ch) => ({
+      "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"
+    }[ch]));
   }
 
   // =========================
@@ -275,32 +535,33 @@ window.addEventListener("DOMContentLoaded", () => {
   // =========================
   // INIT USER IN DB (on app open)
   // =========================
-async function initUserInDB() {
-  const tg_id = getTgIdOrNull();
-  dbg("initUserInDB: tg_id=" + tg_id);
+  async function initUserInDB() {
+    const tg_id = getTgIdOrNull();
+    dbg("initUserInDB: tg_id=" + tg_id);
 
-  if (!tg_id) {
-    dbg("❌ Нет tg_id. Открыто НЕ внутри Telegram или нет user в initDataUnsafe.");
-    return;
+    if (!tg_id) {
+      dbg("❌ Нет tg_id. Открыто НЕ внутри Telegram или нет user в initDataUnsafe.");
+      return;
+    }
+
+    try {
+      const profile = loadProfile();
+      dbg("➡️ Отправляю /api/user/init ...");
+
+      const { ok, status, data } = await postJSON(`${API_BASE}/api/user/init`, {
+        tg_id,
+        profile,
+      });
+
+      dbg(`⬅️ Ответ: ok=${ok} status=${status}`);
+      if (!ok) dbg("init error: " + (data?.error || "unknown"));
+    } catch (e) {
+      dbg("❌ Ошибка initUserInDB: " + String(e?.message || e));
+    }
   }
-
-  try {
-    const profile = loadProfile();
-    dbg("➡️ Отправляю /api/user/init ...");
-
-    const { ok, status, data } = await postJSON(`${API_BASE}/api/user/init`, {
-      tg_id,
-      profile,
-    });
-
-    dbg(`⬅️ Ответ: ok=${ok} status=${status} data=${JSON.stringify(data)}`);
-  } catch (e) {
-    dbg("❌ Ошибка initUserInDB: " + String(e?.message || e));
-  }
-}
 
   // =========================
-  // SEND MESSAGE
+  // SEND MESSAGE (ACTIVE CHAT)
   // =========================
   let isLoading = false;
 
@@ -400,11 +661,75 @@ async function initUserInDB() {
       if (planBtn) planBtn.disabled = false;
     }
   }
-const debugLine = document.getElementById("debugLine");
-function dbg(msg) {
-  if (debugLine) debugLine.textContent = String(msg);
-}
 
+  // =========================
+  // DRAWER USER INFO INIT
+  // =========================
+  function initDrawerUser() {
+    const tg = window.Telegram?.WebApp;
+    const u = tg?.initDataUnsafe?.user;
+
+    if (drawerName) drawerName.textContent = u?.first_name ? u.first_name : "User";
+    if (drawerPhone) drawerPhone.textContent = u?.id ? `ID: ${u.id}` : "ID: —";
+    if (drawerAvatar && u?.photo_url) drawerAvatar.src = u.photo_url;
+
+    // profile modal name field (readonly)
+    if (profileName) profileName.value = u?.first_name ? u.first_name : "User";
+
+    // fill saved profile fields
+    const p = loadProfile();
+    if (profileAge) profileAge.value = p.age ?? "";
+    if (profileNick) profileNick.value = p.nick ?? "";
+    if (profileBio) profileBio.value = p.bio ?? "";
+
+    syncThemeIcon();
+  }
+
+  // =========================
+  // MENU BUTTONS
+  // =========================
+  on(menuProfile, "click", () => {
+    closeDrawer();
+    openProfile();
+  });
+
+  on(menuHistory, "click", () => {
+    // просто скролл к списку чатов
+    historyList?.scrollTo({ top: 0, behavior: "smooth" });
+  });
+
+  on(menuSettings, "click", () => {
+    // пока пусто — можешь потом добавить
+  });
+
+  // clear chats history
+  on(clearHistoryBtn, "click", () => {
+    resetAllChats();
+    renderChatsInHistory();
+  });
+
+  // save profile on close (чтобы не добавлять кнопки)
+  on(closeProfileBtn, "click", () => {
+    const p = {
+      age: profileAge?.value ?? "",
+      nick: profileNick?.value ?? "",
+      bio: profileBio?.value ?? "",
+    };
+    saveProfile(p);
+    closeProfile();
+    initUserInDB();
+  });
+
+  on(profileOverlay, "click", () => {
+    const p = {
+      age: profileAge?.value ?? "",
+      nick: profileNick?.value ?? "",
+      bio: profileBio?.value ?? "",
+    };
+    saveProfile(p);
+    closeProfile();
+    initUserInDB();
+  });
 
   // =========================
   // BINDINGS
@@ -416,6 +741,7 @@ function dbg(msg) {
       sendMessage();
     }
   });
+
   on(planBtn, "click", createPlan);
 
   // =========================
@@ -428,20 +754,32 @@ function dbg(msg) {
 
     const u = tg.initDataUnsafe?.user;
     if (userEl) userEl.textContent = "Привет, " + (u?.first_name || "друг");
-    if (avatarEl && u?.photo_url) avatarEl.src = u.photo_url;
 
-    // create user in DB on open
     initUserInDB();
   } else {
     if (userEl) userEl.textContent = "Открой внутри Telegram WebApp 🙂";
   }
 
-  
   // =========================
-  // INIT UI
+  // BOOT: ensure at least 1 chat exists
   // =========================
+  if (!activeChatId) {
+    // if we have chatsIndex, take first
+    if (Array.isArray(chatsIndex) && chatsIndex.length) {
+      activeChatId = chatsIndex[0];
+    } else {
+      activeChatId = uuid();
+      chatsIndex = [activeChatId];
+    }
+  }
+  ensureChat(activeChatId);
+  saveChats();
+
+  // init UI
+  initDrawerUser();
   switchScreen("home");
   renderMessages();
+  renderChatsInHistory();
 
-  console.log("[LSD] loaded. chat_id =", activeChatId);
+  console.log("[LSD] loaded. activeChatId =", activeChatId);
 });

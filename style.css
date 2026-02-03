@@ -1,716 +1,981 @@
-html, body { height: 100%; }
-body { height: 100vh; }
-main { flex: 1; min-height: 0; }
-#screen-chat { min-height: 0; }
-.chatMessages { min-height: 0; }
+/* ===============================
+   LSD | AI Time Manager
+   TELEGRAM ANDROID UI (FULL)
+   Replace your style.css полностью
+================================= */
 
-body {
-  min-height: 100vh;
-  margin: 0;
+*{ box-sizing:border-box; }
+html, body { height:100%; }
+body{
+  margin:0;
   font-family: Arial, sans-serif;
-  display: flex;
-  flex-direction: column;
-  /* Animated multi-color gradient */
-  background: linear-gradient(
-    270deg,
-    rgba(0, 159, 222, 1) 0%,
-    rgba(224, 78, 237, 1) 25%,
-    rgb(153, 89, 255) 50%,
-    rgba(0, 159, 222, 1) 100%
-  );
-  background-size: 800% 800%;
-  animation: gradientShift 12s ease infinite;
-}
-@keyframes gradientShift {
-  0% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-  100% {
-    background-position: 0% 50%;
-  }
+  display:flex;
+  flex-direction:column;
+  min-height:100vh;
+  overflow:hidden;
+
+  /* общая база */
+  background:#cfe9c8; /* телеграм-обои */
+  color:#0f1a12;
 }
 
+/* ===============================
+   THEME TOKENS
+================================= */
+:root{
+  --tg-bluebar: #5b8aa6;
+  --tg-bluebar-dark: #3c5f73;
 
-.header {
-  position: fixed;
-  top: 0;
-  left: 0;
+  --tg-wall-1: #cfe9c8;
+  --tg-wall-2: #bfe2b6;
 
-  width: 100%;
-  height: 50px;
+  --tg-card: #ffffff;
+  --tg-card2: rgba(255,255,255,0.75);
 
-  display: flex;
-  align-items: center;        /* ⬅️ вместо justify-items */
-  justify-content: flex-start;
+  --tg-text: #0f1a12;
+  --tg-muted: rgba(15,26,18,0.62);
 
-  padding: 8px;
-  gap: 10px;
- 
-  background-color: rgb(53, 166, 211);
-  box-shadow: 0px 5px 10px rgba(0, 0, 0, 0.5);
+  --tg-divider: rgba(15,26,18,0.10);
+  --tg-shadow: 0 8px 24px rgba(0,0,0,0.18);
 
-  z-index: 999;
+  --accent: rgb(53,166,211);
 }
 
+body.dark{
+  --tg-bluebar: #2b4f63;
+  --tg-wall-1: #0f1411;
+  --tg-wall-2: #101a15;
 
-.header h1 {
-  font-size:25px;
-  line-height: 15px;
+  --tg-card: #14141c;
+  --tg-card2: rgba(20,20,28,0.82);
+
+  --tg-text: #ffffff;
+  --tg-muted: rgba(255,255,255,0.62);
+
+  --tg-divider: rgba(255,255,255,0.10);
+  --tg-shadow: 0 10px 30px rgba(0,0,0,0.40);
 }
+
+/* ===============================
+   BACKGROUND (Telegram-ish wallpaper)
+================================= */
+main{
+  flex:1;
+  min-height:0;
+  width:100%;
+  padding-top:66px;     /* header height + safe */
+  padding-bottom:86px;  /* footer height */
+  overflow:hidden;
+  background:
+    radial-gradient(circle at 12% 22%, rgba(255,255,255,0.22) 0 12px, transparent 13px),
+    radial-gradient(circle at 70% 35%, rgba(255,255,255,0.18) 0 10px, transparent 11px),
+    radial-gradient(circle at 42% 78%, rgba(255,255,255,0.20) 0 14px, transparent 15px),
+    linear-gradient(180deg, var(--tg-wall-1), var(--tg-wall-2));
+  background-size: 220px 220px, 240px 240px, 260px 260px, auto;
+  background-repeat: repeat, repeat, repeat, no-repeat;
+}
+
+/* ===============================
+   HEADER (Telegram bar)
+================================= */
+.header{
+  position:fixed;
+  top:0; left:0;
+  width:100%;
+  height:56px;
+
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding: 8px 10px;
+
+  background: var(--tg-bluebar);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+  z-index:999;
+}
+
+/* кнопки в шапке */
+.settings_bt,
+.avatar_bt{
+  width:44px; height:44px;
+  border:0;
+  background:transparent;
+  padding:0;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+.settings_bt img{
+  width:28px; height:28px;
+  filter: invert(1);
+  opacity: .95;
+}
+
 #avatar{
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  object-fit: cover;
-  display: block;
-  overflow: hidden;
-
-  background-color: rgb(241, 241, 241);  
-  box-sizing: border-box;
-  overflow: hidden
-  
-  
+  width:40px; height:40px;
+  border-radius:50%;
+  object-fit:cover;
+  background: rgba(255,255,255,0.85);
+  border: 2px solid rgba(255,255,255,0.35);
 }
 
-main {
-  flex: 10;                       
-  display: flex;
-  flex-direction: column;
-  justify-content: center;         
-  align-items: center;             
-  gap: 12px;
-  border-bottom-left-radius: 30px;
-  border-bottom-right-radius: 30px;
-  padding-top: 100px;
-}
-
-.chat-img {
-  width: 200px;
-  height: 200px;
-}
-
-.name {
-  display: flex;
-  justify-content: center;
-  color:grey;
-}
-
-.footer {
-  flex: 6;
-  display: flex;
-  justify-content: center;
-  padding: 10px;
-    background-color: transparent;
-}
-
-.buttons {
-  width: 100%;
-  display: flex;
-  justify-content: center;
-  gap: 0px;
-  background-color: transparent;
+/* центр: таб-кнопка */
+.buttons{
+  flex:1;
+  display:flex;
+  justify-content:center;
+  align-items:center;
 }
 
 .tab{
-  width: 100%;
-  height: 100%;
-  border: 0;
-  font-size: x-large;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: transparent;
-}
-
-.tab span{
-  display: inline-block;
-   color: rgb(255, 255, 255);
-  background-color: transparent;
-  padding: 0 10px 6px;     /* 10px делает линию короче текста */
-  border-bottom: 3px solid #000;
-}
-
-.LSD {
-  display: flex;
-  padding: 0px;
-  height: auto;
-  width: 100%;
-  align-items: center;
-  justify-content: center;
-}
-
-.LSD h1 {
-  background-image: linear-gradient(   270deg,
-    rgba(0, 159, 222, 1) 0%,
-    rgba(224, 78, 237, 1) 25%,
-    rgb(153, 89, 255) 50%,
-    rgba(0, 159, 222, 1) 100%);
-  color: transparent;
-  background-clip: text;
-  -webkit-background-clip: text;
-}
-
-
-.poisk {
-margin-top: 100px;
-  width: 90%;
-  height: 60px;
-
-  display: flex;
-  border-radius: 30px;
-  justify-content: space-between;
-  justify-items: center;
-}
-
-input {
-  flex: 1;
-  background: transparent;   /* убирает фон */
-  border: 2px;
-  border-radius: 25px;               /* убирает рамку */
-  outline: 2px solid white;              /* убирает обводку при фокусе */
-  font-size: 20px;
+  border:0;
+  background:transparent;
+  font-size: 18px;
+  font-weight: 800;
   color: #fff;
-  padding: 8px 12px;   /* воздух внутри */
-  
+  padding: 8px 12px;
+  border-radius: 12px;
+  cursor:pointer;
 }
-input::placeholder {
-  color: rgb(255, 255, 255);
+
+.tab:active{ opacity:.9; transform:scale(.99); }
+
+/* подпись под табом убираем линию — в телеге её нет */
+.tab span{
+  border:0 !important;
+  padding:0 !important;
+  background:transparent !important;
+  color:#fff;
 }
-.settings_bt {
+
+/* ===============================
+   SCREENS
+================================= */
+.screen{
+  display:none;
+  width:100%;
+  height:100%;
+  flex-direction:column;
+  align-items:center;
+  justify-content:flex-start;
+  overflow:hidden;
+}
+.screen.active{
+  display:flex;
+}
+
+/* ===============================
+   HOME (welcome)
+================================= */
+#screen-home{
+  padding: 14px 0 0;
+}
+
+.LSD{
+  width: 92%;
+  max-width: 520px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  margin-top: 8px;
+}
+
+.LSD h1{
+  margin: 8px 0 2px;
+  font-size: 18px;
+  font-weight: 900;
+  color: rgba(15,26,18,0.85);
   background: transparent;
-  width: 50px;
-  height: 50px;
-  border: 0;
-}
-.settings_bt img {
-  width: 50px;
-  height: 50px;
 }
 
-.search_bt {
-  width: 60px;
-  background: transparent;
-  border: 2px solid white;
-  border-radius: 25px;
-  background-color: rgb(0, 183, 255);
+body.dark .LSD h1{ color: rgba(255,255,255,0.92); }
 
+.name{
+  width: 92%;
+  max-width: 520px;
+  display:flex;
+  justify-content:center;
+  margin: 6px 0 10px;
 }
-
-.search_bt img {
-  width: 50px;
-  height: 50px;
-}
-
-/* 2 экрана внутри main */
-.screen {
-  display: none;
-  width: 100%;
-  height: 100%;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  gap: 12px;
-}
-
-.screen.active {
-  display: flex;
-}
-
-/* Подчёркивание только у активного таба */
-.tab span {
-  border-bottom: 3px solid transparent; /* по умолчанию нет линии */
-}
-
-.tab.active span {
-  border-bottom-color: #000; /* линия только у выбранного */
-}
-
-/* Блок задач (в твоём стиле, светло-серый) */
-.tasksBox {
-  width: 90%;
-  max-width: 420px;
-  background: rgb(241, 241, 241);
-  border-radius: 14px;
-  padding: 12px;
-}
-
-.tasksHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.tasksHeader h2 {
-  margin: 0;
-}
-
-.clearBtn {
-  background: transparent;
-  border: 0;
-  color: rgb(53, 166, 211);
+#user{
+  margin:0;
+  font-size: 16px;
+  color: var(--tg-muted);
   font-weight: 700;
-  cursor: pointer;
 }
 
-/* ===== TASKS -> CARDS STYLE (как в плане) ===== */
+.chat-img{
+  width: 180px;
+  height: 180px;
+  opacity: .9;
+  margin-top: 10px;
+  border-radius: 18px;
+}
+
+/* ===============================
+   TASKS screen (cards area)
+================================= */
+#screen-tasks{
+  padding: 10px 0 0;
+  overflow:auto;
+}
 
 .tasksBox{
-  width: 90%;
+  width: 92%;
   max-width: 520px;
-  background: rgb(241, 241, 241);   /* как cardBox */
-  border-radius: 14px;
+  background: var(--tg-card2);
+  border-radius: 18px;
   padding: 12px;
+  box-shadow: var(--tg-shadow);
+  backdrop-filter: blur(10px);
 }
 
 .tasksHeader{
   display:flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 10px;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom: 8px;
 }
 
 .tasksHeader h2{
-  margin: 0;
+  margin:0;
   font-size: 18px;
-  font-weight: 800;
+  font-weight: 900;
+  color: var(--tg-text);
 }
 
 .clearBtn{
-  background: transparent;
-  border: 0;
-  color: rgb(53, 166, 211);
-  font-weight: 800;
-  cursor: pointer;
-  padding: 6px 8px;
-  border-radius: 10px;
-}
-
-.clearBtn:active{
-  transform: scale(0.98);
-  opacity: 0.9;
-}
-
-/* список карточек */
-.tasksList{
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: grid;
-  gap: 8px;
-}
-
-/* каждая задача = карточка как cardTask */
-.taskItem{
-  background: #fff;
-  border-radius: 12px;
-  padding: 10px 12px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-
-  font-size: 14px;
-  line-height: 1.35;
-}
-
-/* чекбокс чуть аккуратнее */
-.taskItem input[type="checkbox"]{
-  width: 18px;
-  height: 18px;
-  accent-color: rgb(53, 166, 211);
-  flex: 0 0 auto;
-}
-
-/* текст задачи */
-.taskItem .taskText{
-  flex: 1;
-}
-
-/* выполнено */
-.taskItem.done{
-  opacity: 0.65;
-}
-
-.taskItem.done .taskText{
-  text-decoration: line-through;
-}
-
-/* подсказка снизу */
-.tasksHint{
-  margin: 10px 2px 0;
-  opacity: 0.7;
-  font-size: 13px;
-}
-
-/* ===== DARK MODE для задач ===== */
-body.dark .tasksBox{
-  background: #1a1a27; /* как твой dark cardBox */
-  color: #fff;
-}
-
-body.dark .taskItem{
-  background: #14141c; /* как твой dark cardTask */
-  color: #fff;
-}
-
-body.dark .clearBtn{
-  color: rgba(255,255,255,0.85);
-}
-
-
-/* -------- THEME VARIABLES -------- */
-/* ---- Drawer (left -> right, half screen) ---- */
-.drawerOverlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.35);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.25s ease;
-  z-index: 80;
-}
-
-.drawer {
-  position: fixed;
-  top: 7vh;
-  left: 0;
-  width: 50vw;           /* половина экрана */
-  max-width: 420px;      /* чтобы не было слишком широко на больших экранах */
-  height: 95vh;
-  background: var(--panel, #fff);
-  transform: translateX(-105%);
-  transition: transform 0.25s ease;
-  z-index: 90;
-  box-shadow: 12px 0 30px rgba(0,0,0,0.25);
-  border-right: 1px solid rgba(0,0,0,0.12);
-  display: flex;
-  flex-direction: column;
-  padding: 12px;
-  gap: 12px;
-}
-
-.drawer.open {
-  transform: translateX(0);
-}
-
-.drawerOverlay.open {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-/* Header */
-.drawerHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.drawerTitle {
-  margin: 0;
-  font-size: 20px;
-}
-
-.drawerClose {
-  background: transparent;
-  border: 0;
-  font-size: 22px;
-  cursor: pointer;
-}
-
-/* Cards in your style */
-.drawerCard {
-  background: rgb(241, 241, 241);
-  border-radius: 14px;
-  padding: 12px;
-}
-
-.drawerCardGrow {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-/* Theme row */
-.themeRow {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.themeLabel { font-weight: 700; }
-
-.themeToggle {
-  display: flex;
-  gap: 8px;
-}
-
-.themeBtn {
-  border: 1px solid rgba(0,0,0,0.12);
-  background: transparent;
+  border:0;
+  background:transparent;
+  color: var(--accent);
+  font-weight: 900;
   padding: 8px 10px;
   border-radius: 12px;
-  cursor: pointer;
-  font-weight: 700;
+  cursor:pointer;
+}
+.clearBtn:active{ transform:scale(.99); opacity:.9; }
+
+.tasksList{
+  list-style:none;
+  padding:0; margin:0;
+  display:grid;
+  gap:8px;
 }
 
-.themeBtn.active {
-  background: rgb(53, 166, 211);
-  color: #fff;
-  border-color: transparent;
-}
-
-/* History */
-.historyHead {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.historyHead h3 { margin: 0; }
-
-.historyList {
-  background: #fff;
+.taskItem{
+  background: var(--tg-card);
   border-radius: 14px;
-  padding: 10px;
-  overflow: auto;
-  flex: 1;
+  padding: 10px 12px;
+  display:flex;
+  gap:10px;
+  align-items:center;
+  border: 1px solid var(--tg-divider);
 }
 
-.historyItem {
-  border: 1px solid rgba(0,0,0,0.10);
-  border-radius: 12px;
-  padding: 10px;
-  margin-bottom: 10px;
+.taskItem input[type="checkbox"]{
+  width:18px; height:18px;
+  accent-color: var(--accent);
+  flex:0 0 auto;
+}
+
+.taskItem .taskText{ flex:1; color: var(--tg-text); }
+.taskItem.done{ opacity:.65; }
+.taskItem.done .taskText{ text-decoration: line-through; }
+
+.tasksHint{
+  margin: 10px 2px 0;
+  font-size: 13px;
+  opacity:.75;
+  color: var(--tg-muted);
+}
+
+/* ===============================
+   CHAT screen (Telegram bubbles)
+================================= */
+#screen-chat{
+  padding: 8px 0 0;
+  justify-content:flex-start;
+  overflow:hidden;
+}
+
+.chatTop{
+  width: 92%;
+  max-width: 520px;
+  display:flex;
+  justify-content:center;
+  margin-bottom: 6px;
+}
+
+.chatTitle{
+  font-weight: 900;
+  font-size: 14px;
+  color: rgba(15,26,18,0.85);
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.55);
+  border: 1px solid var(--tg-divider);
+  backdrop-filter: blur(10px);
+}
+body.dark .chatTitle{
+  color: rgba(255,255,255,0.92);
+  background: rgba(20,20,28,0.65);
+}
+
+/* сообщения */
+.chatMessages{
+  width: 92%;
+  max-width: 520px;
+  height: calc(100vh - 56px - 86px - 56px); /* header + footer + top */
+  overflow-y:auto;
+  padding: 8px 4px 14px;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  background: transparent;
+}
+
+/* bubbles */
+.msg{
+  max-width: 82%;
+  padding: 10px 12px;
+  border-radius: 18px;
   font-size: 15px;
+  line-height: 1.25;
+  white-space: pre-wrap;
+  word-break: break-word;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.12);
 }
 
-.historyItem:last-child { margin-bottom: 0; }
+.msg.user{
+  align-self:flex-end;
+  background: rgba(53,166,211,0.92);
+  color:#fff;
+  border-bottom-right-radius: 6px;
+}
 
-.historyTime {
-  opacity: 0.65;
-  font-size: 12px;
+.msg.ai{
+  align-self:flex-start;
+  background: rgba(255,255,255,0.85);
+  color: var(--tg-text);
+  border-bottom-left-radius: 6px;
+  border: 1px solid var(--tg-divider);
+}
+body.dark .msg.ai{
+  background: rgba(20,20,28,0.88);
+  color:#fff;
+}
+
+/* typing */
+.chatTyping{
+  width: 92%;
+  max-width: 520px;
+  font-size: 13px;
+  color: var(--tg-muted);
+  padding: 0 12px 8px;
+}
+
+/* ===============================
+   FOOTER (Telegram input)
+================================= */
+.footer{
+  position: fixed;
+  left:0; right:0; bottom:0;
+  height: 86px;
+  padding: 10px;
+  display:flex;
+  justify-content:center;
+  align-items:flex-end;
+  background: transparent;
+  z-index: 60;
+}
+
+.poisk{
+  width: 92%;
+  max-width: 520px;
+  height: 56px;
+  display:flex;
+  align-items:center;
+  gap: 10px;
+}
+
+/* input as telegram pill */
+#prompt{
+  flex:1;
+  height: 56px;
+  border: 1px solid var(--tg-divider);
+  border-radius: 999px;
+  background: rgba(255,255,255,0.82);
+  padding: 0 16px;
+  font-size: 16px;
+  outline: none;
+  color: var(--tg-text);
+  backdrop-filter: blur(12px);
+}
+
+#prompt::placeholder{
+  color: rgba(15,26,18,0.45);
+}
+
+body.dark #prompt{
+  background: rgba(20,20,28,0.75);
+  color:#fff;
+}
+body.dark #prompt::placeholder{
+  color: rgba(255,255,255,0.45);
+}
+
+/* send btn like telegram */
+.search_bt{
+  width:56px;
+  height:56px;
+  border-radius: 50%;
+  border:0;
+  background: var(--accent);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  box-shadow: 0 10px 22px rgba(0,0,0,0.18);
+}
+
+.search_bt img{
+  width: 28px;
+  height: 28px;
+  filter: invert(1);
+}
+
+.search_bt:active{ transform:scale(.98); opacity:.95; }
+
+/* plan button (shown in chat-mode by your JS) */
+#planBtn{
+  height:56px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.60);
+  background: rgba(0,0,0,0.08);
+  color:#fff;
+  font-weight: 900;
+  padding: 0 14px;
+  cursor:pointer;
+  backdrop-filter: blur(12px);
+}
+#planBtn:active{ transform:scale(.99); opacity:.9; }
+#planBtn[hidden]{ display:none !important; }
+
+/* ===============================
+   DRAWER (left menu like Telegram)
+================================= */
+/* ===== TG Drawer like Android ===== */
+
+.drawer{
+  position: fixed;
+  top:0; left:0;
+  width: 86vw;
+  max-width: 420px;
+  height: 100vh;
+  background: var(--tg-card);
+  transform: translateX(-105%);
+  transition: transform .22s ease;
+  z-index: 999999;
+  box-shadow: var(--tg-shadow);
+  display:flex;
+  flex-direction:column;
+  padding: 0;              /* важно: теперь сверху панель */
+  overflow:hidden;         /* чтобы скролл был внутри history */
+}
+.drawer.open{ transform: translateX(0); }
+
+.tgDrawerTop{
+  background: var(--tg-bluebar);
+  padding: 14px 14px 12px;
+  color: #fff;
+}
+
+.tgDrawerTopRow{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+}
+
+.tgDrawerAvatar{
+  width:64px;
+  height:64px;
+  border-radius:50%;
+  object-fit:cover;
+  background: rgba(255,255,255,0.85);
+  border: 2px solid rgba(255,255,255,0.25);
+}
+
+.tgThemeMiniBtn{
+  width:44px;
+  height:44px;
+  border-radius:50%;
+  border:0;
+  background: rgba(255,255,255,0.18);
+  color:#fff;
+  font-size:18px;
+  cursor:pointer;
+}
+.tgThemeMiniBtn:active{ transform: scale(.98); opacity:.95; }
+
+.tgDrawerName{
+  margin-top: 10px;
+  font-weight: 900;
+  font-size: 18px;
+}
+
+.tgDrawerPhone{
+  margin-top: 4px;
+  opacity: .85;
+  font-size: 14px;
+}
+
+/* menu list */
+.tgMenu{
+  padding: 10px 0;
+  background: var(--tg-card);
+  border-bottom: 1px solid var(--tg-divider);
+}
+
+.tgMenuItem{
+  width:100%;
+  border:0;
+  background: transparent;
+  padding: 12px 14px;
+  display:flex;
+  align-items:center;
+  gap: 12px;
+  cursor:pointer;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--tg-text);
+}
+.tgMenuItem:active{ background: rgba(0,0,0,0.04); }
+body.dark .tgMenuItem:active{ background: rgba(255,255,255,0.06); }
+
+.tgMenuIcon{
+  width: 28px;
+  text-align:center;
+  opacity: .85;
+}
+.tgMenuText{ flex:1; }
+
+/* history block with fixed header + scrollframe */
+.tgHistoryBlock{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  min-height:0;
+  background: var(--tg-card);
+}
+
+.tgHistoryHeader{
+  padding: 10px 14px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  border-bottom: 1px solid var(--tg-divider);
+}
+
+.tgHistoryTitle{
+  font-weight: 900;
+  font-size: 14px;
+  color: var(--tg-text);
+}
+
+.tgHistoryClear{
+  border:0;
+  background:transparent;
+  color: var(--accent);
+  font-weight: 900;
+  cursor:pointer;
+  padding: 6px 10px;
+  border-radius: 12px;
+}
+.tgHistoryClear:active{ transform: scale(.99); opacity:.9; }
+
+/* THE SCROLLFRAME */
+.tgHistoryScroll{
+  flex:1;
+  min-height:0;
+  overflow:auto;
+  padding: 10px 10px 14px;
+  background:
+    linear-gradient(180deg, rgba(0,0,0,0.02), transparent);
+}
+body.dark .tgHistoryScroll{
+  background: linear-gradient(180deg, rgba(255,255,255,0.04), transparent);
+}
+
+/* history as chat bubbles (inside drawer) */
+.histMsg{
+  max-width: 92%;
+  margin: 8px 0;
+  padding: 10px 12px;
+  border-radius: 16px;
+  font-size: 14px;
+  line-height: 1.25;
+  border: 1px solid var(--tg-divider);
+  background: rgba(0,0,0,0.03);
+  color: var(--tg-text);
+}
+body.dark .histMsg{
+  background: rgba(255,255,255,0.06);
+}
+
+.histMsg.user{ margin-left:auto; background: rgba(53,166,211,0.12); }
+.histMsg.ai{ margin-right:auto; }
+
+/* маленькое время */
+.histTime{
+  font-size: 11px;
+  opacity: .6;
   margin-top: 6px;
 }
 
-:root {
-  --accent: rgb(53, 166, 211);
-  --bg: #ffffff;
-  --text: #000000;
-  --card: rgb(241, 241, 241);
-  --panel: #ffffff;
-  --border: rgba(0,0,0,0.12);
+/* overlay */
+.drawerOverlay{
+  position: fixed;
+  inset:0;
+  background: rgba(0,0,0,0.35);
+  opacity:0;
+  pointer-events:none;
+  transition: opacity .2s ease;
+  z-index: 80;
+}
+.drawerOverlay.open{
+  opacity:1;
+  pointer-events:auto;
 }
 
-body.dark {
-  --bg: #0f0f14;
-  --text: #ffffff;
-  --card: #1a1a27;
-  --panel: #14141c;
-  --border: rgba(255,255,255,0.12);
+
+.themeRow{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
 }
+.themeLabel{
+  font-weight: 900;
+  color: var(--tg-text);
+}
+body.dark .themeLabel{ color:#fff; }
 
-/* применяем тему к твоим блокам */
-main { background-color: var(--bg); }
-.tab {   background-color: transparent; }
-.header { background-color: var(--accent); }
-.screen.active img { filter: invert(0); }
-
-/* Dark mode (в твоём стиле, но темнее) */
-body.dark .drawer { background: #14141c; border-right-color: rgba(255,255,255,0.12); }
-body.dark .drawerCard { background: #1a1a27; }
-body.dark .historyList { background: #14141c; }
-body.dark .historyItem { border-color: rgba(255,255,255,0.12); }
-body.dark .themeBtn { border-color: rgba(255,255,255,0.18); color: #fff; }
-body.dark .drawerClose, body.dark .drawerTitle { color: #fff; }
-body.dark .screen.active img { filter: invert(1); }
-body.dark .drawerCard { color: #fff;}
-
-/* По умолчанию скрываем кнопку */
-#planBtn { display: none; }
-
-/* Показываем только в режиме чата */
-body.chat-mode #planBtn { display: inline-flex; }
-
-
-/* Аватар как кнопка */
-.avatar_bt{
+.themeToggle{ display:flex; gap:8px; }
+.themeBtn{
+  border: 1px solid var(--tg-divider);
   background: transparent;
-  border: 0;
-  padding: 0;
-  width: 50px;
-  height: 50px;
-  cursor: pointer;
+  padding: 8px 10px;
+  border-radius: 14px;
+  cursor:pointer;
+  font-weight: 900;
+  color: var(--tg-text);
+}
+body.dark .themeBtn{ color:#fff; }
+
+.themeBtn.active{
+  background: var(--accent);
+  border-color: transparent;
+  color:#fff;
 }
 
-/* Profile modal overlay */
+/* ===============================
+   HISTORY = CHAT LIST (Telegram style)
+================================= */
+.historyHead{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+}
+
+.historyHead h3{
+  margin:0;
+  font-size: 16px;
+  font-weight: 900;
+  color: var(--tg-text);
+}
+body.dark .historyHead h3{ color:#fff; }
+
+.historyList{
+  flex:1;
+  min-height:0;
+  overflow:auto;
+  background: var(--tg-card);
+  border-radius: 16px;
+  padding: 0;
+  border: 1px solid var(--tg-divider);
+}
+body.dark .historyList{
+  background: #14141c;
+}
+
+.tgChatRow{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding: 12px 12px;
+  border-bottom: 1px solid var(--tg-divider);
+  cursor:pointer;
+  user-select:none;
+}
+.tgChatRow:last-child{ border-bottom:0; }
+.tgChatRow:active{ opacity:.9; transform:scale(.995); }
+
+.tgEmojiAvatar{
+  width:44px; height:44px;
+  border-radius:50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size: 22px;
+  flex: 0 0 auto;
+  background: rgba(0,0,0,0.06);
+}
+body.dark .tgEmojiAvatar{ background: rgba(255,255,255,0.10); }
+
+.tgChatMid{
+  min-width:0;
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+}
+
+.tgChatTitle{
+  font-weight: 900;
+  font-size: 15px;
+  color: var(--tg-text);
+  white-space: nowrap;
+  overflow:hidden;
+  text-overflow: ellipsis;
+}
+body.dark .tgChatTitle{ color:#fff; }
+
+.tgChatLast{
+  font-size: 13px;
+  color: var(--tg-muted);
+  white-space: nowrap;
+  overflow:hidden;
+  text-overflow: ellipsis;
+}
+
+.tgChatRight{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-end;
+  gap:6px;
+}
+
+.tgChatTime{
+  font-size: 12px;
+  color: rgba(15,26,18,0.55);
+}
+body.dark .tgChatTime{ color: rgba(255,255,255,0.55); }
+
+.tgUnread{
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size: 12px;
+  font-weight: 900;
+  color:#fff;
+  background: var(--accent);
+}
+
+.tgChatDel{
+  margin-left: 6px;
+  border:0;
+  background:transparent;
+  font-size: 18px;
+  font-weight: 900;
+  cursor:pointer;
+  color: rgba(0,0,0,0.45);
+}
+body.dark .tgChatDel{ color: rgba(255,255,255,0.65); }
+
+/* ===============================
+   PROFILE MODAL (keep, but TG-like)
+================================= */
 .profileOverlay{
   position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.35);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.25s ease;
+  inset:0;
+  background: rgba(0,0,0,0.40);
+  opacity:0;
+  pointer-events:none;
+  transition: .2s ease;
   z-index: 95;
 }
+.profileOverlay.open{ opacity:1; pointer-events:auto; }
 
-.profileOverlay.open{
-  opacity: 1;
-  pointer-events: auto;
-}
-
-/* Profile modal */
 .profileModal{
   position: fixed;
   left: 50%;
-  top: 50%;
-  transform: translate(-50%, 50%) scale(0.98);
-  width: min(100vw, 460px);
-  max-height: 60vh;
-  background: #fff;
+  top: 55%;
+  transform: translate(-50%, -50%) scale(.98);
+  width: min(92vw, 520px);
+  max-height: 85vh;
+  background: var(--tg-card);
   border-radius: 18px;
-  overflow: hidden;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.25s ease, transform 0.25s ease;
+  overflow:hidden;
+  opacity:0;
+  pointer-events:none;
+  transition: .2s ease;
   z-index: 100;
+  box-shadow: var(--tg-shadow);
 }
-
-body.dark .profileModal{
-  background: #14141c;
-  color: #fff;
-}
+body.dark .profileModal{ background: #14141c; color:#fff; }
 
 .profileModal.open{
-  opacity: 1;
-  pointer-events: auto;
-  transform: translate(-50%, -15%) scale(1);
+  opacity:1;
+  pointer-events:auto;
+  transform: translate(-50%, -50%) scale(1);
 }
 
 .profileHeader{
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding: 12px 12px;
+  background: rgba(0,0,0,0.03);
 }
+body.dark .profileHeader{ background: rgba(255,255,255,0.06); }
 
-.profileTitle{ margin: 0; font-size: 20px; }
+.profileTitle{
+  margin:0;
+  font-size: 18px;
+  font-weight: 900;
+}
 .profileClose{
-  background: transparent;
-  border: 0;
+  border:0;
+  background:transparent;
   font-size: 22px;
-  cursor: pointer;
+  cursor:pointer;
   color: inherit;
 }
 
-/* Avatar half screen */
+/* avatar row */
 .profileAvatarWrap{
-  background: rgb(0, 195, 255);
-  display: flex;
-  gap: 10px;
-  padding: 5px;
-  align-items: center;
-  justify-content: start;
+  display:flex;
+  gap:12px;
+  padding: 12px;
+  align-items:center;
+  background: rgba(0,0,0,0.03);
 }
+body.dark .profileAvatarWrap{ background: rgba(255,255,255,0.06); }
 
 .profileAvatarWrap img{
-  width: 75%;
-  max-width: 100px;
-  height: auto;
-  aspect-ratio: 1 / 1;
+  width: 86px;
+  height: 86px;
   border-radius: 18px;
   object-fit: cover;
-  background: rgb(241, 241, 241);
+  background: rgba(255,255,255,0.85);
 }
+
+.pass h2{
+  margin:0 0 8px;
+  font-size: 14px;
+  opacity: .85;
+}
+.pass button{
+  border:0;
+  background: var(--accent);
+  color:#fff;
+  font-weight: 900;
+  padding: 10px 12px;
+  border-radius: 14px;
+  cursor:pointer;
+}
+.pass button:active{ transform:scale(.99); opacity:.95; }
 
 .profileCard{
   padding: 12px;
-  display: flex;
+  display:flex;
+  flex-direction:column;
   gap: 10px;
-  flex-direction: column;
-}
-
-.field{
-  gap: 6px;
-  width: 95%;
 }
 
 .field label{
-  font-weight: 700;
-  font-size: 14px;
-  opacity: 0.85;
+  font-weight: 900;
+  font-size: 13px;
+  opacity: .85;
 }
 
 .field input,
 .field textarea{
-  width: 100%;
+  width:100%;
   border-radius: 14px;
-  border: 0;
-  outline: 0;
+  border: 1px solid var(--tg-divider);
+  outline: none;
   padding: 10px 12px;
-  background: rgb(241, 241, 241);
-  font-size: 16px;
+  background: rgba(0,0,0,0.03);
+  color: var(--tg-text);
+  font-size: 15px;
 }
-
 body.dark .field input,
 body.dark .field textarea{
-  background: #1a1a27;
-  color: #fff;
+  background: rgba(255,255,255,0.06);
+  color:#fff;
 }
 
-.field input[readonly]{
-  opacity: 0.75;
-}
-
-.profileSave{
-  width: 100%;
-  padding: 12px;
-  border-radius: 14px;
-  border: 0;
-  background: rgb(53, 166, 211);
-  color: #fff;
-  font-size: 18px;
-  font-weight: 800;
-  cursor: pointer;
-}
-
-.profileHint{
-  font-size: 13px;
-  opacity: 0.7;
-}
-
+/* ===============================
+   AI MODAL (TG-like)
+================================= */
 .aiOverlay{
-  position:fixed; inset:0;
-  background:rgba(0,0,0,.35);
-  opacity:0; pointer-events:none;
+  position: fixed;
+  inset:0;
+  background: rgba(0,0,0,0.40);
+  opacity:0;
+  pointer-events:none;
   transition:.2s;
   z-index:110;
 }
-.aiOverlay.open{opacity:1; pointer-events:auto;}
+.aiOverlay.open{ opacity:1; pointer-events:auto; }
 
 .aiModal{
   position:fixed;
-  left:50%; top:50%;
+  left:50%;
+  top:55%;
   transform:translate(-50%,-50%) scale(.98);
   width:min(92vw,520px);
   max-height:85vh;
-  background: var(--panel, #fff);
+  background: var(--tg-card);
   border-radius:18px;
-  opacity:0; pointer-events:none;
+  overflow:hidden;
+  opacity:0;
+  pointer-events:none;
   transition:.2s;
   z-index:120;
-  overflow:hidden;
+  box-shadow: var(--tg-shadow);
 }
-.aiModal.open{opacity:1; pointer-events:auto; transform:translate(-50%,-50%) scale(1);}
+body.dark .aiModal{ background:#14141c; color:#fff; }
+
+.aiModal.open{
+  opacity:1;
+  pointer-events:auto;
+  transform:translate(-50%,-50%) scale(1);
+}
 
 .aiModalHeader{
-  display:flex; justify-content:space-between; align-items:center;
-  padding:12px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding: 12px;
+  background: rgba(0,0,0,0.03);
 }
-.aiModalHeader button{background:transparent;border:0;font-size:22px;cursor:pointer;color:inherit;}
+body.dark .aiModalHeader{ background: rgba(255,255,255,0.06); }
+
+.aiModalHeader button{
+  border:0;
+  background:transparent;
+  font-size:22px;
+  cursor:pointer;
+  color:inherit;
+}
 
 .aiText{
   margin:0;
@@ -718,365 +983,128 @@ body.dark .field textarea{
   white-space:pre-wrap;
   overflow:auto;
   max-height:calc(85vh - 52px);
-  background:transparent;
   font-size:14px;
 }
 
-.cardsArea{
-  width: 90%;
-  max-width: 520px;
-  display: grid;
-  gap: 12px;
-  margin-top: 10px;
-}
-
-.cardBox{
-  background: rgb(241, 241, 241);
-  border-radius: 14px;
-  padding: 12px;
-}
-
-.cardTitle{
-  margin: 0 0 8px;
-  font-size: 18px;
-  font-weight: 800;
-}
-
-.cardTasks{
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: grid;
-  gap: 8px;
-}
-
-.cardTask{
-  background: #fff;
-  border-radius: 12px;
-  padding: 10px;
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-  align-items: center;
-  font-size: 14px;
-}
-
-.taskMeta{
-  opacity: .7;
-  font-size: 12px;
-  white-space: nowrap;
-}
-
-.cardActions{
-  display:flex;
-  gap: 10px;
-  margin-top: 10px;
-}
-
-.cardBtn{
-  flex: 1;
-  border: 0;
-  border-radius: 12px;
-  padding: 10px;
-  font-weight: 800;
-  cursor: pointer;
-}
-
-.cardBtn.accept{
-  background: rgb(53, 166, 211);
-  color: #fff;
-}
-
-.cardBtn.reject{
-  background: transparent;
-  border: 2px solid rgba(0,0,0,0.15);
-}
-
-/* overlays НЕ должны ловить клики, пока закрыты */
-.drawerOverlay,
-.profileOverlay,
-.aiOverlay {
-  pointer-events: none;
-}
-
-/* ловят клики ТОЛЬКО когда open */
-.drawerOverlay.open,
-.profileOverlay.open,
-.aiOverlay.open {
-  pointer-events: auto;
-}
-
-/* ===== CHAT PANE (Telegram-like) ===== */
-.chatPane{
-  display: none;              /* включим только в chat-mode */
-  width: 92%;
-  max-width: 520px;
-  height: calc(100vh - 50px - 86px); /* header 50px + footer ~86px */
-  background: rgba(255,255,255,0.10);
-  border: 1px solid rgba(255,255,255,0.14);
-  border-radius: 18px;
-  overflow: hidden;
-}
-
-.chatMessages{
-  height: 100%;
-  overflow-y: auto;
-  padding: 14px;
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.chatTyping{
-  padding: 10px 14px;
-  font-size: 13px;
-  color: rgba(247, 1, 1, 0.75);
-}
-
-/* bubble */
-.msg{
-  max-width: 80%;
-  padding: 10px 12px;
-  border-radius: 16px;
-  color: #000000;
-  font-size: 15px;
-  line-height: 1.25;
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
-.msg.user{
-  align-self: flex-end;
-  border-bottom-right-radius: 6px;
-  background: rgba(0,0,0,0.28);
-}
-
-.msg.ai{
-  align-self: flex-start;
-  border-bottom-left-radius: 6px;
-  background: rgba(0, 0, 0, 0.18);
-}
-
-/* ===== FOOTER как у Telegram (всегда снизу) ===== */
-
-
-/* ====== NORMAL MODE (как было) ====== */
-/* твой .poisk margin-top:100px пусть остаётся как сейчас */
-
-/* чат по умолчанию скрыт и НЕ влияет */
-#chatPane { display: none; }
-
-/* ===== CHAT SCREEN (отдельный экран) ===== */
-#screen-chat{
-  width: 100%;
-  height: 100%;
-  justify-content: flex-start;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 0 0;
-  box-sizing: border-box;
-}
-
-/* верхняя строка в чате */
-.chatTop{
-  width: 92%;
-  max-width: 520px;
-  display: flex;
-  justify-content: center;
-}
-
-.chatTitle{
-  font-weight: 800;
-  font-size: 16px;
-  color: rgba(255,255,255,0.95);
-  padding: 8px 14px;
-  border-radius: 14px;
-  background: rgba(0,0,0,0.12); /* легкая прозрачная плашка, можно убрать */
-  backdrop-filter: blur(6px);
-}
-
-/* поле сообщений — ПРОЗРАЧНОЕ */
-.chatMessages{
-  width: 92%;
-  max-width: 520px;
-  height: calc(100vh - 50px - 86px - 56px); 
-  /* header 50 + footer ~86 + chatTop ~56 */
-  overflow-y: auto;
-  padding: 12px;
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-
-  background: transparent;    /* ✅ чат без фона */
-  border: none;               /* ✅ без рамок */
-}
-
-/* "AI печатает" */
-.chatTyping{
-  width: 92%;
-  max-width: 520px;
-  font-size: 13px;
-  color: rgba(255,255,255,0.75);
-  padding: 0 12px 8px;
-  box-sizing: border-box;
-}
-
-/* bubbles */
-.msg{
-  max-width: 80%;
-  padding: 10px 12px;
-  border-radius: 16px;
-  color: #fff;                /* белый текст */
-  font-size: 15px;
-  line-height: 1.25;
-  white-space: pre-wrap;
-  word-break: break-word;
-  backdrop-filter: blur(6px);
-}
-
-.msg.user{
-  align-self: flex-end;
-  border-bottom-right-radius: 6px;
-  background: rgba(0,0,0,0.28);
-}
-
-.msg.ai{
-  align-self: flex-start;
-  border-bottom-left-radius: 6px;
-  background: rgba(0, 0, 0, 0.25);
-}
-
-/* ===== FOOTER внизу только в чат-режиме ===== */
-/* по умолчанию оставляем твою верстку (как была) */
-body.chat-mode .footer{
-  position: fixed;
-  left: 0; right: 0; bottom: 0;
-  padding: 10px;
-  z-index: 60;
-}
-
-/* в чате поле ввода без margin-top:100px */
-body.chat-mode .poisk{
-  margin-top: 0;
-  width: 92%;
-  max-width: 520px;
-  height: 56px;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-/* чтобы main не прятался под footer */
-body.chat-mode main{
-  padding-bottom: 86px;
-  box-sizing: border-box;
-  background: transparent;    /* ✅ чат без фона */
-  border: none;               /* ✅ без рамок */
-}
-.historyChat{
-  cursor: pointer;
-  transition: transform .12s ease, opacity .12s ease;
-}
-.historyChat:active{
-  transform: scale(0.99);
-  opacity: .9;
-}
-
-.historyDelBtn{
-  border: 0;
-  background: transparent;
-  font-size: 18px;
-  font-weight: 900;
-  cursor: pointer;
-  color: rgba(0,0,0,0.55);
-}
-body.dark .historyDelBtn{
-  color: rgba(255,255,255,0.65);
-}
-
-/* Кнопка "Создать план" */
-.plan_bt{
-  border: 2px solid rgba(255,255,255,0.8);
-  background: rgba(0,0,0,0.12);
-  color: #fff;
-  font-weight: 900;
-  border-radius: 25px;
-  padding: 0 14px;
-  height: 56px;
-  cursor: pointer;
-  backdrop-filter: blur(6px);
-  transition: transform .12s ease, opacity .12s ease;
-}
-.plan_bt:active{ transform: scale(0.98); opacity: .9; }
-.plan_bt[disabled]{ opacity: .6; cursor: default; }
-
-/* Оверлей плана */
+/* ===============================
+   PLAN MODAL (TG-like)
+================================= */
 .planOverlay{
   position: fixed;
-  inset: 0;
+  inset:0;
   background: rgba(0,0,0,0.40);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity .2s ease;
-  z-index: 140;
+  opacity:0;
+  pointer-events:none;
+  transition:.2s ease;
+  z-index:140;
 }
-.planOverlay.open{ opacity: 1; pointer-events: auto; }
+.planOverlay.open{ opacity:1; pointer-events:auto; }
 
-/* Окно плана */
 .planModal{
   position: fixed;
-  left: 50%;
-  top: 55%;
-  transform: translate(-50%, -50%) scale(0.98);
-  width: min(92vw, 560px);
-  max-height: 85vh;
-  background: rgba(255,255,255,0.92);
-  border-radius: 18px;
-  overflow: hidden;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity .2s ease, transform .2s ease;
-  z-index: 150;
-  backdrop-filter: blur(10px);
+  left:50%;
+  top:55%;
+  transform:translate(-50%,-50%) scale(.98);
+  width:min(92vw,560px);
+  max-height:85vh;
+  background: var(--tg-card);
+  border-radius:18px;
+  overflow:hidden;
+  opacity:0;
+  pointer-events:none;
+  transition:.2s ease;
+  z-index:150;
+  box-shadow: var(--tg-shadow);
 }
-
-body.dark .planModal{
-  background: rgba(20,20,28,0.92);
-  color: #fff;
-}
+body.dark .planModal{ background:#14141c; color:#fff; }
 
 .planModal.open{
-  opacity: 1;
-  pointer-events: auto;
-  transform: translate(-50%, -50%) scale(1);
+  opacity:1;
+  pointer-events:auto;
+  transform:translate(-50%,-50%) scale(1);
 }
 
 .planHeader{
   display:flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 12px;
+  justify-content:space-between;
+  align-items:center;
+  padding:12px;
+  background: rgba(0,0,0,0.03);
 }
-.planHeader h2{ margin:0; font-size: 20px; }
+body.dark .planHeader{ background: rgba(255,255,255,0.06); }
+
+.planHeader h2{ margin:0; font-size: 18px; font-weight: 900; }
 .planHeader button{
   border:0;
-  background: transparent;
-  font-size: 22px;
-  cursor: pointer;
-  color: inherit;
+  background:transparent;
+  font-size:22px;
+  cursor:pointer;
+  color:inherit;
 }
 
 .planContent{
-  padding: 12px;
-  overflow: auto;
+  padding:12px;
+  overflow:auto;
   max-height: calc(85vh - 52px);
-  display: grid;
-  gap: 12px;
+  display:grid;
+  gap:12px;
 }
 
-/* карточки уже у тебя есть (cardBox/cardBtn...), можно использовать их */
-body.dark .cardBox{ background:#1a1a27; }
-body.dark .cardTask{ background:#14141c; }
-body.dark .cardBtn.reject{ border-color: rgba(255,255,255,0.18); color:#fff; }
+/* plan cards */
+.cardsArea{
+  width:100%;
+  display:grid;
+  gap:12px;
+}
 
+.cardBox{
+  background: rgba(0,0,0,0.03);
+  border-radius: 16px;
+  padding: 12px;
+  border: 1px solid var(--tg-divider);
+}
+body.dark .cardBox{ background: rgba(255,255,255,0.06); }
+
+.cardTitle{
+  margin:0 0 8px;
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.cardTasks{
+  list-style:none;
+  margin:0;
+  padding:0;
+  display:grid;
+  gap:8px;
+}
+.cardTask{
+  background: var(--tg-card);
+  border-radius: 14px;
+  padding: 10px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  border: 1px solid var(--tg-divider);
+}
+body.dark .cardTask{ background:#14141c; }
+
+.taskMeta{ opacity:.7; font-size:12px; white-space:nowrap; }
+
+/* ===============================
+   Utility
+================================= */
+#debugLine{
+  color: rgba(255,255,255,0.85);
+  max-width: 45vw;
+  overflow:hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* images in dark (optional) */
+body.dark .settings_bt img,
+body.dark .search_bt img{
+  filter: invert(1);
+}

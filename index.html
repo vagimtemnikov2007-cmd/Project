@@ -13,10 +13,6 @@
   <button class="settings_bt" type="button">
     <img src="img/settings.svg" alt="">
   </button>
-
-  <button class="avatar_bt" id="openProfile" type="button">
-    <img id="avatar" src="img/Avatar.svg" alt="avatar">
-  </button>
 <div id="debugLine" style="font:12px/1.4 Arial; opacity:.7; padding:6px 10px; word-break:break-all;"></div>
 
   <div class="buttons">
@@ -85,32 +81,44 @@
 
 
   <!-- LEFT DRAWER SETTINGS (вынесен из main) -->
-  <div class="drawerOverlay" id="drawerOverlay"></div>
+<div class="drawerOverlay" id="drawerOverlay"></div>
 
-  <aside class="drawer" id="settingsDrawer" aria-hidden="true">
-    <div class="drawerHeader">
-      <h2 class="drawerTitle">Настройки</h2>
-      <button class="drawerClose" id="drawerClose" type="button">✕</button>
+<aside class="drawer" id="settingsDrawer" aria-hidden="true">
+  <!-- TOP BLUE PANEL -->
+  <div class="tgDrawerTop">
+    <div class="tgDrawerTopRow">
+      <img id="drawerAvatar" class="tgDrawerAvatar" src="img/Avatar.svg" alt="avatar">
+      <button class="tgThemeMiniBtn" id="themeMiniBtn" type="button" aria-label="Тема">🌙</button>
     </div>
 
-    <div class="drawerCard">
-      <div class="themeRow">
-        <span class="themeLabel">Тема</span>
-        <div class="themeToggle">
-          <button class="themeBtn" id="lightBtn" type="button">Светлая</button>
-          <button class="themeBtn" id="darkBtn" type="button">Тёмная</button>
-        </div>
-      </div>
+    <div class="tgDrawerName" id="drawerName">User</div>
+    <div class="tgDrawerPhone" id="drawerPhone">ID: —</div>
+  </div>
+
+  <!-- MENU -->
+  <div class="tgMenu">
+    <button class="tgMenuItem" id="menuProfile" type="button">
+      <span class="tgMenuIcon">👤</span><span class="tgMenuText">Мой профиль</span>
+    </button>
+
+    <button class="tgMenuItem" id="menuSettings" type="button">
+      <span class="tgMenuIcon">⚙️</span><span class="tgMenuText">Настройки</span>
+    </button>
+  </div>
+
+  <!-- HISTORY SCROLLFRAME (не меняет layout) -->
+  <div class="tgHistoryBlock">
+    <div class="tgHistoryHeader">
+      <div class="tgHistoryTitle">История запросов</div>
+      <button class="tgHistoryClear" id="clearHistory" type="button">Очистить</button>
     </div>
 
-    <div class="drawerCard drawerCardGrow">
-      <div class="historyHead">
-        <h3>История запросов</h3>
-        <button class="clearBtn" id="clearHistory" type="button">Очистить</button>
-      </div>
-      <div class="historyList" id="historyList"></div>
+    <div class="tgHistoryScroll" id="historyList">
+      <!-- JS будет вставлять "как чат" -->
     </div>
-  </aside>
+  </div>
+</aside>
+
 
   <!-- PROFILE MODAL -->
 <div class="profileOverlay" id="profileOverlay"></div>
