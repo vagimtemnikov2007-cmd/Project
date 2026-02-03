@@ -180,16 +180,22 @@ window.addEventListener("DOMContentLoaded", () => {
     chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
   }
 
-  function switchScreen(name) {
-    [screenHome, screenTasks, screenChat].forEach((s) => s && s.classList.remove("active"));
-    const el = name === "home" ? screenHome : name === "tasks" ? screenTasks : screenChat;
-    el && el.classList.add("active");
-
-    currentScreen = name;
-    setNavLabel();
-    updatePlanVisibility();
-    if (name === "chat") scrollToBottom();
+function switchScreen(name) {
+  // если уходим с экрана chat — чистим пустые чаты
+  if (currentScreen === "chat" && name !== "chat") {
+    cleanupEmptyChats();
   }
+
+  [screenHome, screenTasks, screenChat].forEach((s) => s && s.classList.remove("active"));
+  const el = name === "home" ? screenHome : name === "tasks" ? screenTasks : screenChat;
+  el && el.classList.add("active");
+
+  currentScreen = name;
+  setNavLabel();
+  updatePlanVisibility();
+  if (name === "chat") scrollToBottom();
+}
+
 
   on(navBtn, "click", () => {
     if (currentScreen === "home") switchScreen("tasks");
@@ -242,6 +248,7 @@ window.addEventListener("DOMContentLoaded", () => {
     drawerOverlay?.classList.add("open");
     drawer?.setAttribute("aria-hidden", "false");
     renderChatsInHistory(); // render chats list every time drawer opens
+
   }
 
   function closeDrawer() {
@@ -287,17 +294,65 @@ window.addEventListener("DOMContentLoaded", () => {
     sJSONSet(STORAGE_CHATS_INDEX, chatsIndex);
     sJSONSet(STORAGE_CHAT_CACHE, chatCache);
   }
+  
+  function cleanupEmptyChats() {
+  // "сидит ли юзер в чате прямо сейчас"
+  const userIsInChatNow = (currentScreen === "chat");
 
-  function setActiveChat(id) {
-    activeChatId = id;
-    ensureChat(activeChatId);
-    if (!chatsIndex.includes(activeChatId)) chatsIndex.unshift(activeChatId);
-    bumpChatToTop(activeChatId);
-    saveChats();
+  // удаляем пустые чаты:
+  // - если чат НЕ активный
+  // - ИЛИ он активный, но юзер не на экране chat
+  const toDelete = chatsIndex.filter((id) => {
+    ensureChat(id);
+    const c = chatCache[id];
+    const empty = !c.messages || c.messages.length === 0;
+    const isActive = id === activeChatId;
 
-    renderMessages();
-    renderChatsInHistory();
+    return empty && (!isActive || !userIsInChatNow);
+  });
+
+  if (!toDelete.length) return;
+
+  // удаляем из кеша и индекса
+  toDelete.forEach((id) => {
+    delete chatCache[id];
+  });
+  chatsIndex = chatsIndex.filter((id) => !toDelete.includes(id));
+
+  // если удалили активный чат — выбираем новый
+  if (toDelete.includes(activeChatId)) {
+    activeChatId = chatsIndex[0] || "";
   }
+
+  // если чатов совсем не осталось — создаём новый
+  if (!activeChatId) {
+    const id = uuid();
+    chatCache[id] = {
+      meta: { title: "Новый чат", emoji: pickEmoji(), updatedAt: Date.now() },
+      messages: [],
+    };
+    chatsIndex = [id];
+    activeChatId = id;
+  }
+
+  saveChats();
+  renderChatsInHistory();
+}
+
+function setActiveChat(id) {
+  // если был пустой чат и мы уходим из него — удалим
+  cleanupEmptyChats();
+
+  activeChatId = id;
+  ensureChat(activeChatId);
+  if (!chatsIndex.includes(activeChatId)) chatsIndex.unshift(activeChatId);
+  bumpChatToTop(activeChatId);
+  saveChats();
+
+  renderMessages();
+  renderChatsInHistory();
+}
+
 
   function bumpChatToTop(id) {
     chatsIndex = [id, ...chatsIndex.filter((x) => x !== id)];
@@ -780,6 +835,7 @@ window.addEventListener("DOMContentLoaded", () => {
   switchScreen("home");
   renderMessages();
   renderChatsInHistory();
+  cleanupEmptyChats();
 
   console.log("[LSD] loaded. activeChatId =", activeChatId);
 });

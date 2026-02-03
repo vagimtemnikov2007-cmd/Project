@@ -1,28 +1,46 @@
 /* ===============================
    LSD | AI Time Manager
    TELEGRAM ANDROID UI (FULL)
+   One clean style.css (merged)
 ================================= */
 
-* {
-  box-sizing: border-box;
+/* ===============================
+   RESET
+================================= */
+*{ box-sizing:border-box; }
+html, body{ height:100%; }
+
+body{
+  margin:0;
+  font-family: Arial, sans-serif;
+  display:flex;
+  flex-direction:column;
+  min-height:100vh;
+  overflow:hidden;
+
+  background: var(--bg);
+  color: var(--text);
 }
 
-html,
-body {
-  height: 100%;
-}
-
-:root {
+/* ===============================
+   THEME TOKENS (LIGHT DEFAULT)
+   Меняешь тут — меняется всё
+================================= */
+:root{
   /* brand */
-  --accent: rgb(53, 166, 211);
+  --accent: rgb(53,166,211);
 
-  /* wallpaper / background */
+  /* wallpaper */
   --wallpaper-image: url(img/tg22.png);
-  --wallpaper-blend: soft-light;
+  --wallpaper-blend: soft-light; /* попробуй: overlay / soft-light / multiply */
+  --wallpaper-filter: none;
 
-  --bg: linear-gradient(135deg, #f6f3b8, #b1f6a8, #f6f3b8);
+  /* base bg (under wallpaper) */
+  --bg: linear-gradient(180deg, #cfe9c8, #bfe2b6);
+
+  /* text */
   --text: #0f1a12;
-  --muted: rgba(15, 26, 18, 0.62);
+  --muted: rgba(15,26,18,0.62);
 
   /* top bar */
   --bar-bg: #5b8aa6;
@@ -30,93 +48,75 @@ body {
 
   /* surfaces */
   --card: #ffffff;
-  --card-glass: rgba(255, 255, 255, 0.75);
-  --surface-2: rgba(0, 0, 0, 0.03);
+  --card-glass: rgba(255,255,255,0.75);
+  --surface-2: rgba(0,0,0,0.03);
 
   /* borders / shadows */
-  --divider: rgba(15, 26, 18, 0.10);
-  --shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  --divider: rgba(15,26,18,0.10);
+  --shadow: 0 8px 24px rgba(0,0,0,0.18);
 
   /* chat bubbles */
-  --bubble-user-bg: rgba(53, 166, 211, 0.92);
+  --bubble-user-bg: rgba(53,166,211,0.92);
   --bubble-user-text: #ffffff;
-  --bubble-ai-bg: rgba(255, 255, 255, 0.85);
+  --bubble-ai-bg: rgba(255,255,255,0.85);
   --bubble-ai-text: var(--text);
 
   /* input bar */
-  --input-wrap-bg: rgba(255, 255, 255, 0.82);
+  --input-wrap-bg: rgba(255,255,255,0.82);
   --input-bg: transparent;
   --input-text: var(--text);
-  --input-placeholder: rgba(15, 26, 18, 0.45);
+  --input-placeholder: rgba(15,26,18,0.45);
 
-  /* circle buttons */
-  --btn-circle-bg: rgba(0, 0, 0, 0.08);
-  --btn-circle-icon-invert: 1;
-  /* wallpaper filter (default: none) */
-  --wallpaper-filter: none;
-
-  --bg: linear-gradient(135deg, #f6f3b8, #b1f6a8, #f6f3b8);
-  --text: #0f1a12;
-  --muted: rgba(15, 26, 18, 0.62);
+  /* icons */
+  --icon-invert: 1; /* 1 = белые иконки через invert(1) */
 }
 
-/* DARK THEME: only overrides */
-body.dark {
-  --bg: linear-gradient(135deg, #181818, #000000);
-  --text: rgba(255, 255, 255, 0.92);
-  --muted: rgba(255, 255, 255, 0.62);
+/* ===============================
+   DARK THEME (only overrides)
+================================= */
+body.dark{
+  --bg: linear-gradient(180deg, #0f1411, #101a15);
+
+  --text: rgba(255,255,255,0.92);
+  --muted: rgba(255,255,255,0.62);
 
   --bar-bg: #2b4f63;
   --bar-text: #ffffff;
 
   --card: #14141c;
-  --card-glass: rgba(20, 20, 28, 0.82);
-  --surface-2: rgba(255, 255, 255, 0.06);
+  --card-glass: rgba(20,20,28,0.82);
+  --surface-2: rgba(255,255,255,0.06);
 
-  --divider: rgba(255, 255, 255, 0.10);
-  --shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  --divider: rgba(255,255,255,0.10);
+  --shadow: 0 10px 30px rgba(0,0,0,0.45);
 
-  --bubble-ai-bg: rgba(20, 20, 28, 0.88);
-  --bubble-ai-text: rgba(255, 255, 255, 0.92);
+  --bubble-ai-bg: rgba(20,20,28,0.88);
+  --bubble-ai-text: rgba(255,255,255,0.92);
 
-  --input-wrap-bg: rgba(20, 20, 28, 0.78);
-  --input-text: rgba(255, 255, 255, 0.92);
-  --input-placeholder: rgba(255, 255, 255, 0.45);
+  --input-wrap-bg: rgba(20,20,28,0.78);
+  --input-text: rgba(255,255,255,0.92);
+  --input-placeholder: rgba(255,255,255,0.45);
 
-  --btn-circle-bg: rgba(255, 255, 255, 0.10);
-  --btn-circle-icon-invert: invert(1);
-  /* invert wallpaper in dark theme */
+  /* invert wallpaper in dark */
   --wallpaper-filter: invert(1) hue-rotate(180deg) saturate(0.9) brightness(0.98);
 
-.chat-img {
-  filter: invert(1) hue-rotate(180deg) saturate(0.9) brightness(0.98);
-}
+  --icon-invert: 1;
 }
 
-body {
-  margin: 0;
-  font-family: Arial, sans-serif;
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-  overflow: hidden;
-
-  background: var(--bg);
-  color: var(--text);
-}
-
-/* Wallpaper overlay */
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
+/* ===============================
+   WALLPAPER overlay (TG)
+================================= */
+body::before{
+  content:"";
+  position:fixed;
+  inset:0;
   background-image: var(--wallpaper-image);
   background-size: cover;
   background-position: center;
   mix-blend-mode: var(--wallpaper-blend);
-  pointer-events: none;
+  pointer-events:none;
   z-index: 0;
-  filter: var(--wallpaper-filter, none);
+  filter: var(--wallpaper-filter);
   transition: filter .18s linear;
 }
 
@@ -132,176 +132,176 @@ main,
 .aiModal,
 .planOverlay,
 .planModal,
-.plan {
-  position: relative;
-  z-index: 1;
+.plan{
+  position:relative;
+  z-index:1;
 }
 
 /* ===============================
    LAYOUT
 ================================= */
-main {
-  flex: 1;
-  min-height: 0;
-  width: 100%;
-  padding-top: 66px;
-  padding-bottom: 86px;
-  overflow: hidden;
+main{
+  flex:1;
+  min-height:0;
+  width:100%;
+  padding-top:66px;     /* header height + safe */
+  padding-bottom:86px;  /* footer height */
+  overflow:hidden;
 }
 
 /* ===============================
-   HEADER
+   HEADER (Telegram bar)
 ================================= */
-.header {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 56px;
+.header{
+  position:fixed;
+  top:0; left:0;
+  width:100%;
+  height:56px;
 
-  display: flex;
-  align-items: center;
-  gap: 10px;
+  display:flex;
+  align-items:center;
+  gap:10px;
   padding: 8px 10px;
 
   background: var(--bar-bg);
   color: var(--bar-text);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
-  z-index: 999;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+  z-index:999;
 }
 
-.settings_bt {
-  width: 44px;
-  height: 44px;
-  border: 0;
-  background: transparent;
-  padding: 0;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+/* кнопки в шапке */
+.settings_bt,
+.avatar_bt{
+  width:44px; height:44px;
+  border:0;
+  background:transparent;
+  padding:0;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
 }
 
-.settings_bt img {
-  width: 28px;
-  height: 28px;
-  filter: invert(var(--btn-circle-icon-invert));
-  opacity: .95;
+.settings_bt img{
+  width:28px; height:28px;
+  filter: invert(var(--icon-invert));
+  opacity:.95;
 }
 
-.buttons {
-  flex: 1;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+#avatar{
+  width:40px; height:40px;
+  border-radius:50%;
+  object-fit:cover;
+  background: rgba(255,255,255,0.85);
+  border: 2px solid rgba(255,255,255,0.35);
 }
 
-.tab {
-  border: 0;
-  background: transparent;
+.buttons{
+  flex:1;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+}
+
+.tab{
+  border:0;
+  background:transparent;
   font-size: 18px;
   font-weight: 800;
   color: var(--bar-text);
   padding: 8px 12px;
   border-radius: 12px;
-  cursor: pointer;
+  cursor:pointer;
 }
-
-.tab:active {
-  opacity: .9;
-  transform: scale(.99);
-}
-
-.tab span {
-  border: 0 !important;
-  padding: 0 !important;
-  background: transparent !important;
+.tab:active{ opacity:.9; transform:scale(.99); }
+.tab span{
+  border:0 !important;
+  padding:0 !important;
+  background:transparent !important;
   color: var(--bar-text);
 }
 
-.debugLine {
-  font: 12px/1.4 Arial;
-  opacity: 0.7;
-  padding: 6px 10px;
-  word-break: break-all;
+/* debug line id */
+#debugLine{
+  color: rgba(255,255,255,0.85);
   max-width: 45vw;
-  overflow: hidden;
+  overflow:hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font: 12px/1.4 Arial;
+  opacity: .7;
+  padding: 6px 10px;
+  word-break: break-all;
 }
 
 /* ===============================
    SCREENS
 ================================= */
-.screen {
-  display: none;
-  width: 100%;
-  height: 100%;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-start;
-  overflow: hidden;
+.screen{
+  display:none;
+  width:100%;
+  height:100%;
+  flex-direction:column;
+  align-items:center;
+  justify-content:flex-start;
+  overflow:hidden;
 }
-
-.screen.active {
-  display: flex;
-}
+.screen.active{ display:flex; }
 
 /* ===============================
-   HOME
+   HOME (welcome)
 ================================= */
-#screen-home {
-  padding: 14px 0 0;
-}
+#screen-home{ padding: 14px 0 0; }
 
-.LSD {
-  width: 92%;
-  max-width: 520px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.LSD{
+  width:92%;
+  max-width:520px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
   margin-top: 8px;
 }
-
-.LSD h1 {
+.LSD h1{
   margin: 8px 0 2px;
   font-size: 18px;
   font-weight: 900;
-  color: color-mix(in srgb, var(--text) 85%, transparent);
+  color: rgba(15,26,18,0.85);
 }
+body.dark .LSD h1{ color: rgba(255,255,255,0.92); }
 
-.name {
-  width: 92%;
-  max-width: 520px;
-  display: flex;
-  justify-content: center;
+.name{
+  width:92%;
+  max-width:520px;
+  display:flex;
+  justify-content:center;
   margin: 6px 0 10px;
 }
-
-#user {
-  margin: 0;
+#user{
+  margin:0;
   font-size: 16px;
   color: var(--muted);
   font-weight: 700;
 }
 
-.chat-img {
+.chat-img{
   width: 180px;
   height: 180px;
   opacity: .9;
   margin-top: 10px;
   border-radius: 18px;
+  /* если хочешь — можно включать через переменную фильтр */
+  filter: var(--wallpaper-filter);
 }
 
 /* ===============================
-   TASKS
+   TASKS screen (cards area)
 ================================= */
-#screen-tasks {
+#screen-tasks{
   padding: 10px 0 0;
-  overflow: auto;
+  overflow:auto;
 }
 
-.tasksBox {
+.tasksBox{
   width: 92%;
   max-width: 520px;
   background: var(--card-glass);
@@ -311,121 +311,110 @@ main {
   backdrop-filter: blur(10px);
 }
 
-.tasksHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+.tasksHeader{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
   margin-bottom: 8px;
 }
 
-.tasksHeader h2 {
-  margin: 0;
+.tasksHeader h2{
+  margin:0;
   font-size: 18px;
   font-weight: 900;
   color: var(--text);
 }
 
-.clearBtn {
-  border: 0;
-  background: transparent;
+.clearBtn{
+  border:0;
+  background:transparent;
   color: var(--accent);
   font-weight: 900;
   padding: 8px 10px;
   border-radius: 12px;
-  cursor: pointer;
+  cursor:pointer;
+}
+.clearBtn:active{ transform:scale(.99); opacity:.9; }
+
+.tasksList{
+  list-style:none;
+  padding:0; margin:0;
+  display:grid;
+  gap:8px;
 }
 
-.clearBtn:active {
-  transform: scale(.99);
-  opacity: .9;
-}
-
-.tasksList {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: grid;
-  gap: 8px;
-}
-
-.taskItem {
+.taskItem{
   background: var(--card);
   border-radius: 14px;
   padding: 10px 12px;
-  display: flex;
-  gap: 10px;
-  align-items: center;
+  display:flex;
+  gap:10px;
+  align-items:center;
   border: 1px solid var(--divider);
 }
 
-.taskItem input[type="checkbox"] {
-  width: 18px;
-  height: 18px;
+.taskItem input[type="checkbox"]{
+  width:18px; height:18px;
   accent-color: var(--accent);
-  flex: 0 0 auto;
+  flex:0 0 auto;
 }
 
-.taskItem .taskText {
-  flex: 1;
-  color: var(--text);
-}
+.taskItem .taskText{ flex:1; color: var(--text); }
+.taskItem.done{ opacity:.65; }
+.taskItem.done .taskText{ text-decoration: line-through; }
 
-.taskItem.done {
-  opacity: .65;
-}
-
-.taskItem.done .taskText {
-  text-decoration: line-through;
-}
-
-.tasksHint {
+.tasksHint{
   margin: 10px 2px 0;
   font-size: 13px;
-  opacity: .75;
+  opacity:.75;
   color: var(--muted);
 }
 
 /* ===============================
-   CHAT
+   CHAT screen (Telegram bubbles)
 ================================= */
-#screen-chat {
+#screen-chat{
   padding: 8px 0 0;
-  justify-content: flex-start;
-  overflow: hidden;
+  justify-content:flex-start;
+  overflow:hidden;
 }
 
-.chatTop {
+.chatTop{
   width: 92%;
   max-width: 520px;
-  display: flex;
-  justify-content: center;
+  display:flex;
+  justify-content:center;
   margin-bottom: 6px;
 }
 
-.chatTitle {
+.chatTitle{
   font-weight: 900;
   font-size: 14px;
-  color: color-mix(in srgb, var(--text) 85%, transparent);
+  color: rgba(15,26,18,0.85);
   padding: 8px 12px;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--card) 55%, transparent);
+  background: rgba(255,255,255,0.55);
   border: 1px solid var(--divider);
   backdrop-filter: blur(10px);
 }
+body.dark .chatTitle{
+  color: rgba(255,255,255,0.92);
+  background: rgba(20,20,28,0.65);
+}
 
-.chatMessages {
+.chatMessages{
   width: 92%;
   max-width: 520px;
   height: calc(100vh - 56px - 86px - 56px);
-  overflow-y: auto;
+  overflow-y:auto;
   padding: 8px 4px 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
   background: transparent;
 }
 
-.msg {
+.msg{
   max-width: 82%;
   padding: 10px 12px;
   border-radius: 18px;
@@ -433,25 +422,26 @@ main {
   line-height: 1.25;
   white-space: pre-wrap;
   word-break: break-word;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.12);
 }
 
-.msg.user {
-  align-self: flex-end;
+.msg.user{
+  align-self:flex-end;
   background: var(--bubble-user-bg);
   color: var(--bubble-user-text);
   border-bottom-right-radius: 6px;
 }
 
-.msg.ai {
-  align-self: flex-start;
+.msg.ai{
+  align-self:flex-start;
   background: var(--bubble-ai-bg);
   color: var(--bubble-ai-text);
   border-bottom-left-radius: 6px;
   border: 1px solid var(--divider);
 }
 
-.chatTyping {
+/* typing */
+.chatTyping{
   width: 92%;
   max-width: 520px;
   font-size: 13px;
@@ -460,49 +450,539 @@ main {
 }
 
 /* ===============================
-   FOOTER (INPUT)
+   FOOTER (Telegram input)
 ================================= */
-.footer {
+.footer{
   position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  left:0; right:0; bottom:0;
   height: 86px;
   padding: 10px;
-  display: flex;
-  justify-content: center;
-  align-items: flex-end;
+  display:flex;
+  justify-content:center;
+  align-items:flex-end;
   background: transparent;
   z-index: 60;
 }
 
-.poisk {
-  width: 100%;
+.poisk{
+  width: 92%;
   max-width: 520px;
   height: 56px;
-  display: flex;
-  align-items: center;
-  gap: 0px;
+  display:flex;
+  align-items:center;
+  gap: 10px;
+
   border-radius: 999px;
   background: var(--input-wrap-bg);
-  padding: 0 5px;
+  padding: 0 10px;
   backdrop-filter: blur(12px);
+  border: 1px solid var(--divider);
 }
 
-#prompt {
-  flex: 1;
+#prompt{
+  flex:1;
   height: 56px;
   border: 0;
-  outline: none;
-  padding: 0 10px;
-  border-radius: 50px;
   background: var(--input-bg);
-  color: var(--input-text);
+  padding: 0 6px;
   font-size: 16px;
+  outline: none;
+  color: var(--input-text);
 }
 
-#prompt::placeholder {
-  color: var(--input-placeholder);
+#prompt::placeholder{ color: var(--input-placeholder); }
+
+/* send btn */
+.search_bt{
+  width:46px;
+  height:46px;
+  border-radius: 50%;
+  border:0;
+  background: var(--accent);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  box-shadow: 0 10px 22px rgba(0,0,0,0.18);
+}
+.search_bt img{ width: 28px; height: 28px; filter: invert(1); }
+.search_bt:active{ transform:scale(.98); opacity:.95; }
+
+/* plan button */
+.plan{
+  width: 100%;
+  position: fixed;
+  bottom: 8%;
+  display: flex;
+  justify-content: center;
+  z-index: 70;
+}
+
+#planBtn{
+  height:56px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.60);
+  background: rgba(0,0,0,0.08);
+  color:#fff;
+  font-weight: 900;
+  padding: 0 14px;
+  cursor:pointer;
+  backdrop-filter: blur(12px);
+}
+body.dark #planBtn{
+  border: 1px solid rgba(255,255,255,0.18);
+  background: rgba(255,255,255,0.10);
+}
+#planBtn:active{ transform:scale(.99); opacity:.9; }
+#planBtn[hidden]{ display:none !important; }
+
+/* ===============================
+   DRAWER (left menu)
+================================= */
+.drawer{
+  position: fixed;
+  top:0; left:0;
+  width: 86vw;
+  max-width: 420px;
+  height: 100vh;
+  background: var(--card);
+  transform: translateX(-105%);
+  transition: transform .22s ease;
+  z-index: 999999;
+  box-shadow: var(--shadow);
+  display:flex;
+  flex-direction:column;
+  padding: 0;
+  overflow:hidden;
+}
+.drawer.open{ transform: translateX(0); }
+
+.tgDrawerTop{
+  background: var(--bar-bg);
+  padding: 14px 14px 12px;
+  color: var(--bar-text);
+}
+
+.tgDrawerTopRow{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+}
+
+.tgDrawerAvatar{
+  width:64px;
+  height:64px;
+  border-radius:50%;
+  object-fit:cover;
+  background: rgba(255,255,255,0.85);
+  border: 2px solid rgba(255,255,255,0.25);
+}
+
+.tgThemeMiniBtn{
+  width:44px;
+  height:44px;
+  border-radius:50%;
+  border:0;
+  background: rgba(255,255,255,0.18);
+  color:#fff;
+  font-size:18px;
+  cursor:pointer;
+}
+.tgThemeMiniBtn:active{ transform: scale(.98); opacity:.95; }
+
+.tgDrawerName{ margin-top: 10px; font-weight: 900; font-size: 18px; }
+.tgDrawerPhone{ margin-top: 4px; opacity: .85; font-size: 14px; }
+
+.tgMenu{
+  padding: 10px 0;
+  background: var(--card);
+  border-bottom: 1px solid var(--divider);
+}
+.tgMenuItem{
+  width:100%;
+  border:0;
+  background: transparent;
+  padding: 12px 14px;
+  display:flex;
+  align-items:center;
+  gap: 12px;
+  cursor:pointer;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+}
+.tgMenuItem:active{ background: rgba(0,0,0,0.04); }
+body.dark .tgMenuItem:active{ background: rgba(255,255,255,0.06); }
+
+.tgMenuIcon{ width: 28px; text-align:center; opacity: .85; }
+.tgMenuText{ flex:1; }
+
+.tgHistoryBlock{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  min-height:0;
+  background: var(--card);
+}
+
+.tgHistoryHeader{
+  padding: 10px 14px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  border-bottom: 1px solid var(--divider);
+}
+.tgHistoryTitle{ font-weight: 900; font-size: 14px; color: var(--text); }
+
+.tgHistoryClear{
+  border:0;
+  background:transparent;
+  color: var(--accent);
+  font-weight: 900;
+  cursor:pointer;
+  padding: 6px 10px;
+  border-radius: 12px;
+}
+.tgHistoryClear:active{ transform: scale(.99); opacity:.9; }
+
+.tgHistoryScroll{
+  flex:1;
+  min-height:0;
+  overflow:auto;
+  padding: 10px 10px 14px;
+  background: linear-gradient(180deg, rgba(0,0,0,0.02), transparent);
+}
+body.dark .tgHistoryScroll{
+  background: linear-gradient(180deg, rgba(255,255,255,0.04), transparent);
+}
+
+.histMsg{
+  max-width: 92%;
+  margin: 8px 0;
+  padding: 10px 12px;
+  border-radius: 16px;
+  font-size: 14px;
+  line-height: 1.25;
+  border: 1px solid var(--divider);
+  background: var(--surface-2);
+  color: var(--text);
+}
+.histMsg.user{ margin-left:auto; background: rgba(53,166,211,0.12); }
+.histMsg.ai{ margin-right:auto; }
+
+.histTime{ font-size: 11px; opacity: .6; margin-top: 6px; }
+
+.drawerOverlay{
+  position: fixed;
+  inset:0;
+  background: rgba(0,0,0,0.35);
+  opacity:0;
+  pointer-events:none;
+  transition: opacity .2s ease;
+  z-index: 80;
+}
+.drawerOverlay.open{
+  opacity:1;
+  pointer-events:auto;
+}
+
+/* ===============================
+   HISTORY LIST (telegram-like)
+================================= */
+.historyHead{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+}
+
+.historyHead h3{
+  margin:0;
+  font-size: 16px;
+  font-weight: 900;
+  color: var(--text);
+}
+
+.historyList{
+  flex:1;
+  min-height:0;
+  overflow:auto;
+  background: var(--card);
+  border-radius: 16px;
+  padding: 0;
+  border: 1px solid var(--divider);
+}
+
+.tgChatRow{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding: 12px 12px;
+  border-bottom: 1px solid var(--divider);
+  cursor:pointer;
+  user-select:none;
+}
+.tgChatRow:last-child{ border-bottom:0; }
+.tgChatRow:active{ opacity:.9; transform:scale(.995); }
+
+.tgEmojiAvatar{
+  width:44px; height:44px;
+  border-radius:50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size: 22px;
+  flex: 0 0 auto;
+  background: rgba(0,0,0,0.06);
+}
+body.dark .tgEmojiAvatar{ background: rgba(255,255,255,0.10); }
+
+.tgChatMid{
+  min-width:0;
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+}
+
+.tgChatTitle{
+  font-weight: 900;
+  font-size: 15px;
+  color: var(--text);
+  white-space: nowrap;
+  overflow:hidden;
+  text-overflow: ellipsis;
+}
+
+.tgChatLast{
+  font-size: 13px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow:hidden;
+  text-overflow: ellipsis;
+}
+
+.tgChatRight{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-end;
+  gap:6px;
+}
+
+.tgChatTime{
+  font-size: 12px;
+  color: rgba(15,26,18,0.55);
+}
+body.dark .tgChatTime{ color: rgba(255,255,255,0.55); }
+
+.tgUnread{
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size: 12px;
+  font-weight: 900;
+  color:#fff;
+  background: var(--accent);
+}
+
+.tgChatDel{
+  margin-left: 6px;
+  border:0;
+  background:transparent;
+  font-size: 18px;
+  font-weight: 900;
+  cursor:pointer;
+  color: rgba(0,0,0,0.45);
+}
+body.dark .tgChatDel{ color: rgba(255,255,255,0.65); }
+
+/* ===============================
+   MODALS (profile / ai / plan)
+================================= */
+.profileOverlay,
+.aiOverlay,
+.planOverlay{
+  position: fixed;
+  inset:0;
+  background: rgba(0,0,0,0.40);
+  opacity:0;
+  pointer-events:none;
+  transition: .2s ease;
+  z-index: 95;
+}
+.profileOverlay.open,
+.aiOverlay.open,
+.planOverlay.open{ opacity:1; pointer-events:auto; }
+
+.profileModal,
+.aiModal,
+.planModal{
+  position: fixed;
+  left: 50%;
+  top: 55%;
+  transform: translate(-50%, -50%) scale(.98);
+  width: min(92vw, 560px);
+  max-height: 85vh;
+  background: var(--card);
+  border-radius: 18px;
+  overflow:hidden;
+  opacity:0;
+  pointer-events:none;
+  transition: .2s ease;
+  z-index: 100;
+  box-shadow: var(--shadow);
+  color: var(--text);
+}
+.profileModal.open,
+.aiModal.open,
+.planModal.open{
+  opacity:1;
+  pointer-events:auto;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.profileHeader,
+.aiModalHeader,
+.planHeader{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding: 12px 12px;
+  background: var(--surface-2);
+}
+
+.profileTitle{ margin:0; font-size: 18px; font-weight: 900; }
+.profileClose{
+  border:0;
+  background:transparent;
+  font-size: 22px;
+  cursor:pointer;
+  color: inherit;
+}
+
+.profileAvatarWrap{
+  display:flex;
+  gap:12px;
+  padding: 12px;
+  align-items:center;
+  background: var(--surface-2);
+}
+.profileAvatarWrap img{
+  width: 86px;
+  height: 86px;
+  border-radius: 18px;
+  object-fit: cover;
+  background: rgba(255,255,255,0.85);
+}
+
+.pass h2{ margin:0 0 8px; font-size: 14px; opacity: .85; }
+.pass button{
+  border:0;
+  background: var(--accent);
+  color:#fff;
+  font-weight: 900;
+  padding: 10px 12px;
+  border-radius: 14px;
+  cursor:pointer;
+}
+.pass button:active{ transform:scale(.99); opacity:.95; }
+
+.profileCard{
+  padding: 12px;
+  display:flex;
+  flex-direction:column;
+  gap: 10px;
+}
+
+.field label{ font-weight: 900; font-size: 13px; opacity: .85; }
+
+.field input,
+.field textarea{
+  width:100%;
+  border-radius: 14px;
+  border: 1px solid var(--divider);
+  outline: none;
+  padding: 10px 12px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 15px;
+}
+
+.aiModalHeader button,
+.planHeader button{
+  border:0;
+  background:transparent;
+  font-size:22px;
+  cursor:pointer;
+  color:inherit;
+}
+
+.aiText{
+  margin:0;
+  padding:12px;
+  white-space:pre-wrap;
+  overflow:auto;
+  max-height:calc(85vh - 52px);
+  font-size:14px;
+}
+
+.planHeader h2{ margin:0; font-size: 18px; font-weight: 900; }
+
+.planContent{
+  padding:12px;
+  overflow:auto;
+  max-height: calc(85vh - 52px);
+  display:grid;
+  gap:12px;
+}
+
+/* plan cards */
+.cardsArea{
+  width:100%;
+  display:grid;
+  gap:12px;
+}
+
+.cardBox{
+  background: var(--surface-2);
+  border-radius: 16px;
+  padding: 12px;
+  border: 1px solid var(--divider);
+}
+
+.cardTitle{
+  margin:0 0 8px;
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.cardTasks{
+  list-style:none;
+  margin:0;
+  padding:0;
+  display:grid;
+  gap:8px;
+}
+
+.cardTask{
+  background: var(--card);
+  border-radius: 14px;
+  padding: 10px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  border: 1px solid var(--divider);
+}
+
+.taskMeta{
+  opacity:.7;
+  font-size:12px;
+  white-space:nowrap;
 }
 
 .plus {
@@ -510,7 +990,7 @@ main {
   height: 46px;
   border-radius: 50%;
   border: 0;
-  background: var(--btn-circle-bg);
+
   display: flex;
   align-items: center;
   justify-content: center;
@@ -525,410 +1005,29 @@ main {
   opacity: .85;
 }
 
-.search_bt {
-  width: 46px;
-  height: 46px;
-  border-radius: 50%;
-  border: 0;
-  background: var(--accent);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.18);
-}
-
-.search_bt img {
-  width: 28px;
-  height: 28px;
-  filter: invert(1);
-}
-
-.search_bt:active {
-  transform: scale(.98);
-  opacity: .95;
-}
-
-/* plan button */
-.plan {
-  width: 100%;
-  position: fixed;
-  bottom: 8%;
-  display: flex;
-  justify-content: center;
-  z-index: 70;
-}
-
-#planBtn {
-  height: 56px;
-  border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--text) 20%, transparent);
-  background: color-mix(in srgb, var(--card) 35%, transparent);
-  color: var(--text);
-  font-weight: 900;
-  padding: 0 14px;
-  cursor: pointer;
-  backdrop-filter: blur(12px);
-}
-
-#planBtn:active {
-  transform: scale(.99);
-  opacity: .9;
-}
-
-#planBtn[hidden] {
-  display: none !important;
-}
-
-/* ===============================
-   DRAWER
-================================= */
-.drawer {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 86vw;
-  max-width: 420px;
-  height: 100vh;
-  background: var(--card);
-  transform: translateX(-105%);
-  transition: transform .22s ease;
-  z-index: 999999;
-  box-shadow: var(--shadow);
-  display: flex;
-  flex-direction: column;
-  padding: 0;
-  overflow: hidden;
-}
-
-.drawer.open {
-  transform: translateX(0);
-}
-
-.tgDrawerTop {
-  background: var(--bar-bg);
-  padding: 14px 14px 12px;
-  color: var(--bar-text);
-}
-
-.tgDrawerTopRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.tgDrawerAvatar {
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
-  object-fit: cover;
-  background: rgba(255, 255, 255, 0.85);
-  border: 2px solid rgba(255, 255, 255, 0.25);
-}
-
-.tgThemeMiniBtn {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  border: 0;
-  background: rgba(255, 255, 255, 0.18);
-  color: #fff;
-  font-size: 18px;
-  cursor: pointer;
-}
-
-.tgThemeMiniBtn:active {
-  transform: scale(.98);
-  opacity: .95;
-}
-
-.tgDrawerName {
-  margin-top: 10px;
-  font-weight: 900;
-  font-size: 18px;
-}
-
-.tgDrawerPhone {
-  margin-top: 4px;
-  opacity: .85;
-  font-size: 14px;
-}
-
-.tgMenu {
-  padding: 10px 0;
-  background: var(--card);
-  border-bottom: 1px solid var(--divider);
-}
-
-.tgMenuItem {
-  width: 100%;
-  border: 0;
-  background: transparent;
-  padding: 12px 14px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  cursor: pointer;
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--text);
-}
-
-.tgMenuItem:active {
-  background: color-mix(in srgb, var(--text) 6%, transparent);
-}
-
-.tgMenuIcon {
-  width: 28px;
-  text-align: center;
-  opacity: .85;
-}
-
-.tgMenuText {
-  flex: 1;
-}
-
-.tgHistoryBlock {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  background: var(--card);
-}
-
-.tgHistoryHeader {
-  padding: 10px 14px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-bottom: 1px solid var(--divider);
-}
-
-.tgHistoryTitle {
-  font-weight: 900;
-  font-size: 14px;
-  color: var(--text);
-}
-
-.tgHistoryClear {
-  border: 0;
-  background: transparent;
-  color: var(--accent);
-  font-weight: 900;
-  cursor: pointer;
-  padding: 6px 10px;
-  border-radius: 12px;
-}
-
-.tgHistoryClear:active {
-  transform: scale(.99);
-  opacity: .9;
-}
-
-.tgHistoryScroll {
-  flex: 1;
-  min-height: 0;
-  overflow: auto;
-  padding: 10px 10px 14px;
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.02), transparent);
-}
-
-.histMsg {
-  max-width: 92%;
-  margin: 8px 0;
-  padding: 10px 12px;
-  border-radius: 16px;
-  font-size: 14px;
-  line-height: 1.25;
-  border: 1px solid var(--divider);
-  background: var(--surface-2);
-  color: var(--text);
-}
-
-.histMsg.user {
-  margin-left: auto;
-  background: color-mix(in srgb, var(--accent) 14%, transparent);
-}
-
-.histMsg.ai {
-  margin-right: auto;
-}
-
-.histTime {
-  font-size: 11px;
-  opacity: .6;
-  margin-top: 6px;
-}
-
-.drawerOverlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.35);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity .2s ease;
-  z-index: 80;
-}
-
-.drawerOverlay.open {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-/* ===============================
-   MODALS
-================================= */
-.profileOverlay,
-.aiOverlay,
-.planOverlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.40);
-  opacity: 0;
-  pointer-events: none;
-  transition: .2s ease;
-  z-index: 95;
-}
-
-.profileOverlay.open,
-.aiOverlay.open,
-.planOverlay.open {
-  opacity: 1;
-  pointer-events: auto;
-}
-
+/* smooth theme change */
+body,
+.header,
+.tasksBox,
+.taskItem,
+.msg,
+.poisk,
+#prompt,
+.drawer,
 .profileModal,
 .aiModal,
-.planModal {
-  position: fixed;
-  left: 50%;
-  top: 55%;
-  transform: translate(-50%, -50%) scale(.98);
-  width: min(92vw, 560px);
-  max-height: 85vh;
-  background: var(--card);
-  border-radius: 18px;
-  overflow: hidden;
-  opacity: 0;
-  pointer-events: none;
-  transition: .2s ease;
-  z-index: 100;
-  box-shadow: var(--shadow);
-  color: var(--text);
+.planModal{
+  transition:
+    background-color .25s ease,
+    color .25s ease,
+    border-color .25s ease,
+    box-shadow .25s ease,
+    opacity .25s ease,
+    transform .25s ease,
+    filter .25s ease;
 }
 
-.profileModal.open,
-.aiModal.open,
-.planModal.open {
-  opacity: 1;
-  pointer-events: auto;
-  transform: translate(-50%, -50%) scale(1);
-}
-
-.profileHeader,
-.aiModalHeader,
-.planHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 12px;
-  background: var(--surface-2);
-}
-
-.profileTitle {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 900;
-}
-
-.profileClose {
-  border: 0;
-  background: transparent;
-  font-size: 22px;
-  cursor: pointer;
-  color: inherit;
-}
-
-.profileAvatarWrap {
-  display: flex;
-  gap: 12px;
-  padding: 12px;
-  align-items: center;
-  background: var(--surface-2);
-}
-
-.profileAvatarWrap img {
-  width: 86px;
-  height: 86px;
-  border-radius: 18px;
-  object-fit: cover;
-  background: rgba(255, 255, 255, 0.85);
-}
-
-.pass h2 {
-  margin: 0 0 8px;
-  font-size: 14px;
-  opacity: .85;
-}
-
-.pass button {
-  border: 0;
-  background: var(--accent);
-  color: #fff;
-  font-weight: 900;
-  padding: 10px 12px;
-  border-radius: 14px;
-  cursor: pointer;
-}
-
-.pass button:active {
-  transform: scale(.99);
-  opacity: .95;
-}
-
-.profileCard {
-  padding: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.field label {
-  font-weight: 900;
-  font-size: 13px;
-  opacity: .85;
-}
-
-.field input,
-.field textarea {
-  width: 100%;
-  border-radius: 14px;
-  border: 1px solid var(--divider);
-  outline: none;
-  padding: 10px 12px;
-  background: var(--surface-2);
-  color: var(--text);
-  font-size: 15px;
-}
-
-.aiText {
-  margin: 0;
-  padding: 12px;
-  white-space: pre-wrap;
-  overflow: auto;
-  max-height: calc(85vh - 52px);
-  font-size: 14px;
-}
-
-.planContent {
-  padding: 12px;
-  overflow: auto;
-  max-height: calc(85vh - 52px);
-  display: grid;
-  gap: 12px;
-}
-
-/* small helper */
-#planBtn[hidden] {
-  display: none !important;
+/* плавно меняем обои (filter) */
+body::before{
+  transition: filter .25s ease, opacity .25s ease;
 }
