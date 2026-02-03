@@ -1,4 +1,4 @@
-// LSD Front — FULL (Chats + Tasks + Auto-delete empty chats + Plan -> Tasks)
+// LSD Front — OLD UI + Chats in drawer history + Plan modal (Accept/Decline -> Tasks)
 // Drop-in replacement for your current JavaScript.js
 
 window.addEventListener("DOMContentLoaded", () => {
@@ -12,6 +12,16 @@ window.addEventListener("DOMContentLoaded", () => {
   const dbg = (msg) => {
     if (debugLine) debugLine.textContent = String(msg);
   };
+
+  function escapeHTML(s) {
+    return String(s).replace(/[&<>"']/g, (ch) => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#039;",
+    }[ch]));
+  }
 
   // =========================
   // SAFE STORAGE (Telegram WebView fix)
@@ -50,14 +60,13 @@ window.addEventListener("DOMContentLoaded", () => {
     sSet(key, JSON.stringify(obj));
   }
 
-  function escapeHTML(s) {
-    return String(s).replace(/[&<>"']/g, (ch) => ({
-      "&": "&amp;",
-      "<": "&lt;",
-      ">": "&gt;",
-      '"': "&quot;",
-      "'": "&#039;",
-    }[ch]));
+  function sRemove(key) {
+    try {
+      localStorage.removeItem(key);
+    } catch {}
+    try {
+      memStore.delete(key);
+    } catch {}
   }
 
   // =========================
@@ -74,7 +83,8 @@ window.addEventListener("DOMContentLoaded", () => {
   const STORAGE_CHAT_CACHE = "lsd_chat_cache_v3";   // { chatId: { meta, messages } }
 
   // tasks
-  const STORAGE_TASKS = "lsd_tasks_v1"; // array [{ id, text, done }]
+  const STORAGE_TASKS = "lsd_tasks_v1"; // [{id,text,done}]
+  const STORAGE_PLAN_DRAFT = "lsd_plan_draft_v1"; // {chat_id,cards,ts}
 
   const EMOJIS = ["💬","🧠","⚡","🧩","📌","🎯","🧊","🍀","🌙","☀️","🦊","🐺","🐼","🧪","📚"];
 
@@ -105,46 +115,45 @@ window.addEventListener("DOMContentLoaded", () => {
     return Number.isFinite(n) ? n : null;
   }
 
-async function postJSON(url, payload, timeoutMs = 20000) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  async function postJSON(url, payload, timeoutMs = 25000) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
 
-  try {
-    dbg("➡️ fetch: " + url);
-
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-      signal: controller.signal,
-    });
-
-    const raw = await res.text();
-
-    let data = null;
     try {
-      data = raw ? JSON.parse(raw) : null;
-    } catch {
-      data = { error: "bad_json_from_server", raw };
+      dbg("➡️ " + url);
+
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      });
+
+      const raw = await res.text();
+
+      let data = null;
+      try {
+        data = raw ? JSON.parse(raw) : null;
+      } catch {
+        data = { error: "bad_json_from_server", raw };
+      }
+
+      dbg(`⬅️ status=${res.status} ok=${res.ok}`);
+      return { ok: res.ok, status: res.status, data };
+    } catch (e) {
+      const msg =
+        e?.name === "AbortError"
+          ? `timeout_${timeoutMs}ms`
+          : String(e?.message || e);
+      dbg("❌ fetch error: " + msg);
+      return { ok: false, status: 0, data: { error: msg } };
+    } finally {
+      clearTimeout(timer);
     }
-
-    dbg(`⬅️ status=${res.status} ok=${res.ok}`);
-    return { ok: res.ok, status: res.status, data };
-  } catch (e) {
-    const msg =
-      e?.name === "AbortError"
-        ? `timeout_${timeoutMs}ms`
-        : String(e?.message || e);
-
-    dbg("❌ fetch error: " + msg);
-    return { ok: false, status: 0, data: { error: msg } };
-  } finally {
-    clearTimeout(timer);
   }
-}
 
   // =========================
-  // ELEMENTS
+  // ELEMENTS (OLD UI)
   // =========================
   const settingsBtn = document.querySelector(".settings_bt");
   const drawer = $("settingsDrawer");
@@ -157,9 +166,6 @@ async function postJSON(url, payload, timeoutMs = 20000) {
   const navBtn = $("navBtn");
   const navBtnText = navBtn?.querySelector("span");
 
-  const tasksListEl = $("tasksList");
-  const clearTasksBtn = $("clearTasks");
-
   const promptEl = $("prompt");
   const sendBtn = $("sendBtn");
 
@@ -167,6 +173,10 @@ async function postJSON(url, payload, timeoutMs = 20000) {
   const chatTypingEl = $("chatTyping");
 
   const planBtn = $("planBtn");
+  const planOverlay = $("planOverlay");
+  const planModal = $("planModal");
+  const planContent = $("planContent");
+  const closePlanBtn = $("closePlan");
 
   const userEl = $("user");
 
@@ -180,11 +190,16 @@ async function postJSON(url, payload, timeoutMs = 20000) {
 
   // drawer menu
   const menuProfile = $("menuProfile");
+  const menuHistory = $("menuHistory");
   const menuSettings = $("menuSettings");
 
-  // history list container
+  // history list container (render CHATS here)
   const historyList = $("historyList");
   const clearHistoryBtn = $("clearHistory");
+
+  // tasks
+  const tasksListEl = $("tasksList");
+  const clearTasksBtn = $("clearTasks");
 
   // profile modal
   const profileModal = $("profileModal");
@@ -209,6 +224,11 @@ async function postJSON(url, payload, timeoutMs = 20000) {
 
   // tasks
   let tasks = sJSONGet(STORAGE_TASKS, []);
+  let planDraft = sJSONGet(STORAGE_PLAN_DRAFT, null);
+
+  function saveTasks() { sJSONSet(STORAGE_TASKS, tasks); }
+  function savePlanDraft(d) { planDraft = d; sJSONSet(STORAGE_PLAN_DRAFT, d); }
+  function clearPlanDraft() { planDraft = null; sRemove(STORAGE_PLAN_DRAFT); }
 
   // =========================
   // UI: SCREEN SWITCH
@@ -224,10 +244,8 @@ async function postJSON(url, payload, timeoutMs = 20000) {
   }
 
   function switchScreen(name) {
-    // если уходим с экрана chat — чистим пустые чаты
-    if (currentScreen === "chat" && name !== "chat") {
-      cleanupEmptyChats();
-    }
+    // когда уходим из чата — чистим пустые чаты
+    if (currentScreen === "chat" && name !== "chat") cleanupEmptyChats();
 
     [screenHome, screenTasks, screenChat].forEach((s) => s && s.classList.remove("active"));
     const el = name === "home" ? screenHome : name === "tasks" ? screenTasks : screenChat;
@@ -250,7 +268,6 @@ async function postJSON(url, payload, timeoutMs = 20000) {
   function loadProfile() {
     return sJSONGet(STORAGE_PROFILE, { age: "", nick: "", bio: "" });
   }
-
   function saveProfile(p) {
     sJSONSet(STORAGE_PROFILE, p);
   }
@@ -268,6 +285,20 @@ async function postJSON(url, payload, timeoutMs = 20000) {
     profileOverlay.classList.remove("open");
     profileModal.setAttribute("aria-hidden", "true");
   }
+
+  function saveProfileAndClose() {
+    const p = {
+      age: profileAge?.value ?? "",
+      nick: profileNick?.value ?? "",
+      bio: profileBio?.value ?? "",
+    };
+    saveProfile(p);
+    closeProfile();
+    initUserInDB();
+  }
+
+  on(closeProfileBtn, "click", saveProfileAndClose);
+  on(profileOverlay, "click", saveProfileAndClose);
 
   // =========================
   // THEME
@@ -304,10 +335,6 @@ async function postJSON(url, payload, timeoutMs = 20000) {
   // =========================
   // TASKS
   // =========================
-  function saveTasks() {
-    sJSONSet(STORAGE_TASKS, tasks);
-  }
-
   function renderTasks() {
     if (!tasksListEl) return;
     tasksListEl.innerHTML = "";
@@ -323,7 +350,6 @@ async function postJSON(url, payload, timeoutMs = 20000) {
     tasks.forEach((t) => {
       const li = document.createElement("li");
       li.className = "taskItem" + (t.done ? " done" : "");
-
       li.innerHTML = `
         <input type="checkbox" ${t.done ? "checked" : ""} />
         <div class="taskText">${escapeHTML(t.text)}</div>
@@ -374,7 +400,7 @@ async function postJSON(url, payload, timeoutMs = 20000) {
       return;
     }
 
-    // migrate
+    // migrate possible old shapes
     if (!chatCache[id].meta) {
       chatCache[id].meta = { title: "Новый чат", emoji: pickEmoji(), updatedAt: Date.now() };
     }
@@ -414,7 +440,7 @@ async function postJSON(url, payload, timeoutMs = 20000) {
   }
 
   function cleanupEmptyChats() {
-    const userIsInChatNow = (currentScreen === "chat");
+    const userIsInChatNow = currentScreen === "chat";
 
     const toDelete = chatsIndex.filter((id) => {
       ensureChat(id);
@@ -429,9 +455,7 @@ async function postJSON(url, payload, timeoutMs = 20000) {
     toDelete.forEach((id) => delete chatCache[id]);
     chatsIndex = chatsIndex.filter((id) => !toDelete.includes(id));
 
-    if (toDelete.includes(activeChatId)) {
-      activeChatId = chatsIndex[0] || "";
-    }
+    if (toDelete.includes(activeChatId)) activeChatId = chatsIndex[0] || "";
 
     if (!activeChatId) {
       const id = uuid();
@@ -506,8 +530,7 @@ async function postJSON(url, payload, timeoutMs = 20000) {
     if (!chatMessagesEl) return;
     chatMessagesEl.innerHTML = "";
 
-    const arr = messages();
-    arr.forEach((m) => {
+    messages().forEach((m) => {
       const div = document.createElement("div");
       div.className = "msg " + (m.who === "user" ? "user" : "ai");
       div.textContent = m.text;
@@ -525,7 +548,7 @@ async function postJSON(url, payload, timeoutMs = 20000) {
   }
 
   // =========================
-  // RENDER CHATS (DRAWER HISTORY)
+  // RENDER CHATS IN DRAWER (#historyList)
   // =========================
   function renderChatsInHistory() {
     if (!historyList) return;
@@ -541,9 +564,7 @@ async function postJSON(url, payload, timeoutMs = 20000) {
         <div class="tgChatTitle">Новый чат</div>
         <div class="tgChatLast">Создать новый диалог</div>
       </div>
-      <div class="tgChatRight">
-        <div class="tgChatTime"></div>
-      </div>
+      <div class="tgChatRight"><div class="tgChatTime"></div></div>
     `;
     newRow.addEventListener("click", () => {
       createNewChat();
@@ -567,10 +588,7 @@ async function postJSON(url, payload, timeoutMs = 20000) {
 
       const row = document.createElement("div");
       row.className = "tgChatRow";
-
-      if (id === activeChatId) {
-        row.style.background = "rgba(0,0,0,0.03)";
-      }
+      if (id === activeChatId) row.style.background = "rgba(0,0,0,0.03)";
 
       row.innerHTML = `
         <div class="tgEmojiAvatar">${c.meta.emoji || "💬"}</div>
@@ -594,55 +612,141 @@ async function postJSON(url, payload, timeoutMs = 20000) {
   }
 
   // =========================
-  // PLAN -> TASKS (NO MODAL)
+  // PLAN MODAL (Accept/Decline)
   // =========================
-  async function createPlan() {
-    if (isLoading) return;
+  function openPlanModal(contentNodeOrHTML) {
+    if (!planOverlay || !planModal || !planContent) return;
 
-    const tg_id = getTgIdOrNull();
-    if (!tg_id) {
-      dbg("❌ Открой внутри Telegram (нет tg_id)");
-      return;
+    if (typeof contentNodeOrHTML === "string") {
+      planContent.innerHTML = contentNodeOrHTML;
+    } else {
+      planContent.innerHTML = "";
+      planContent.appendChild(contentNodeOrHTML);
     }
 
-    if (messages().length < 2) {
-      dbg("🙂 Мало переписки для плана");
-      return;
-    }
+    planOverlay.classList.add("open");
+    planModal.classList.add("open");
+  }
 
-    isLoading = true;
-    if (planBtn) planBtn.disabled = true;
+  function closePlanModal() {
+    planOverlay?.classList.remove("open");
+    planModal?.classList.remove("open");
+  }
 
-    try {
-      dbg("Создаю план…");
+  on(closePlanBtn, "click", closePlanModal);
+  on(planOverlay, "click", closePlanModal);
 
-      const profile = loadProfile();
-      const { ok, status, data } = await postJSON(`${API_BASE}/api/plan/create`, {
-        tg_id,
-        chat_id: activeChatId,
-        profile,
+  function renderPlanCards(cards) {
+    const wrap = document.createElement("div");
+    wrap.className = "cardsArea";
+
+    (cards || []).forEach((card, idx) => {
+      const box = document.createElement("div");
+      box.className = "cardBox";
+
+      const title = document.createElement("h3");
+      title.className = "cardTitle";
+      title.textContent = card?.title ? String(card.title) : `План #${idx + 1}`;
+
+      const ul = document.createElement("ul");
+      ul.className = "cardTasks";
+
+      const ts = Array.isArray(card?.tasks) ? card.tasks : [];
+      ts.forEach((t) => {
+        const txt = String(t?.t || "").trim();
+        if (!txt) return;
+
+        const li = document.createElement("li");
+        li.className = "cardTask";
+
+        const left = document.createElement("div");
+        left.textContent = txt;
+
+        const right = document.createElement("div");
+        right.className = "taskMeta";
+
+        const meta = [];
+        if (Number.isFinite(Number(t?.min))) meta.push(`${Number(t.min)}м`);
+        if (t?.energy) meta.push(String(t.energy));
+        right.textContent = meta.join(" • ");
+
+        li.appendChild(left);
+        li.appendChild(right);
+        ul.appendChild(li);
       });
 
-      if (!ok) {
-        dbg("❌ Ошибка плана: " + (data?.error || `status_${status}`));
-        return;
-      }
+      box.appendChild(title);
+      box.appendChild(ul);
+      wrap.appendChild(box);
+    });
 
-      const cards = Array.isArray(data?.cards) ? data.cards : [];
-      if (!cards.length) {
-        dbg("🙂 План пустой (AI вернул 0 карточек)");
-        return;
-      }
+    return wrap;
+  }
 
+  function renderPlanWithActions(cards) {
+    const root = document.createElement("div");
+
+    // cards
+    root.appendChild(renderPlanCards(cards));
+
+    // actions
+    const actions = document.createElement("div");
+    actions.className = "planActions";
+
+    const btnAccept = document.createElement("button");
+    btnAccept.type = "button";
+    btnAccept.className = "planBtnAccept";
+    btnAccept.textContent = "✅ Принять";
+
+    const btnDecline = document.createElement("button");
+    btnDecline.type = "button";
+    btnDecline.className = "planBtnDecline";
+    btnDecline.textContent = "❌ Отклонить";
+
+    btnAccept.addEventListener("click", () => {
       setTasksFromCards(cards);
-      dbg("✅ План добавлен в задачи");
+      clearPlanDraft();
+      closePlanModal();
       switchScreen("tasks");
+      dbg("✅ План принят -> задачи добавлены");
+    });
+
+    btnDecline.addEventListener("click", () => {
+      clearPlanDraft();
+      closePlanModal();
+      dbg("❌ План отклонён");
+    });
+
+    actions.appendChild(btnAccept);
+    actions.appendChild(btnDecline);
+
+    root.appendChild(actions);
+    return root;
+  }
+
+  function openDraftIfExists() {
+    if (!planDraft?.cards || !Array.isArray(planDraft.cards) || !planDraft.cards.length) return;
+    openPlanModal(renderPlanWithActions(planDraft.cards));
+  }
+
+  // =========================
+  // INIT USER IN DB (on app open)
+  // =========================
+  async function initUserInDB() {
+    const tg_id = getTgIdOrNull();
+    dbg("initUserInDB: tg_id=" + tg_id);
+
+    if (!tg_id) {
+      dbg("❌ Нет tg_id. Открыто НЕ внутри Telegram.");
+      return;
+    }
+
+    try {
+      const profile = loadProfile();
+      const { ok, status, data } = await postJSON(`${API_BASE}/api/user/init`, { tg_id, profile });
+      if (!ok) dbg("init error: " + (data?.error || `status_${status}`));
     } catch (e) {
-      console.log("PLAN ERROR:", e);
-      dbg("❌ Не удалось подключиться к серверу");
-    } finally {
-      isLoading = false;
-      if (planBtn) planBtn.disabled = false;
+      dbg("❌ Ошибка initUserInDB: " + String(e?.message || e));
     }
   }
 
@@ -668,8 +772,7 @@ async function postJSON(url, payload, timeoutMs = 20000) {
     isLoading = true;
     if (sendBtn) sendBtn.disabled = true;
     if (chatTypingEl) chatTypingEl.hidden = false;
-    dbg("🧠 AI печатает… (жду ответ)");
-
+    dbg("🧠 AI печатает…");
 
     try {
       const profile = loadProfile();
@@ -698,30 +801,56 @@ async function postJSON(url, payload, timeoutMs = 20000) {
   }
 
   // =========================
-  // INIT USER IN DB (on app open)
+  // CREATE PLAN (show modal + accept/decline)
   // =========================
-  async function initUserInDB() {
-    const tg_id = getTgIdOrNull();
-    dbg("initUserInDB: tg_id=" + tg_id);
+  async function createPlan() {
+    if (isLoading) return;
 
+    const tg_id = getTgIdOrNull();
     if (!tg_id) {
-      dbg("❌ Нет tg_id. Открыто НЕ внутри Telegram или нет user в initDataUnsafe.");
+      openPlanModal("<div class='historyItem'>Открой внутри Telegram (нет tg_id)</div>");
       return;
     }
 
-    try {
-      const profile = loadProfile();
-      dbg("➡️ /api/user/init ...");
+    if (messages().length < 2) {
+      openPlanModal("<div class='historyItem'>Мало переписки для плана 🙂</div>");
+      return;
+    }
 
-      const { ok, status, data } = await postJSON(`${API_BASE}/api/user/init`, {
+    isLoading = true;
+    if (planBtn) planBtn.disabled = true;
+
+    try {
+      openPlanModal("<div class='historyItem'>Создаю план…</div>");
+
+      const profile = loadProfile();
+      const { ok, status, data } = await postJSON(`${API_BASE}/api/plan/create`, {
         tg_id,
+        chat_id: activeChatId,
         profile,
       });
 
-      dbg(`⬅️ init ok=${ok} status=${status}`);
-      if (!ok) dbg("init error: " + (data?.error || "unknown"));
+      if (!ok) {
+        openPlanModal("<div class='historyItem'>Ошибка: " + (data?.error || `status_${status}`) + "</div>");
+        return;
+      }
+
+      const cards = Array.isArray(data?.cards) ? data.cards : [];
+      if (!cards.length) {
+        openPlanModal("<div class='historyItem'>План пустой. Напиши больше деталей 🙂</div>");
+        return;
+      }
+
+      // save draft (если пользователь закрыл — можно открыть снова)
+      savePlanDraft({ chat_id: activeChatId, cards, ts: Date.now() });
+
+      openPlanModal(renderPlanWithActions(cards));
     } catch (e) {
-      dbg("❌ Ошибка initUserInDB: " + String(e?.message || e));
+      console.log("PLAN ERROR:", e);
+      openPlanModal("<div class='historyItem'>Не удалось подключиться к серверу.</div>");
+    } finally {
+      isLoading = false;
+      if (planBtn) planBtn.disabled = false;
     }
   }
 
@@ -747,35 +876,23 @@ async function postJSON(url, payload, timeoutMs = 20000) {
   }
 
   // =========================
-  // MENU + PROFILE SAVE
+  // MENU BUTTONS
   // =========================
   on(menuProfile, "click", () => {
     closeDrawer();
     openProfile();
   });
 
-  on(menuSettings, "click", () => {
-    // пока пусто
+  on(menuHistory, "click", () => {
+    historyList?.scrollTo({ top: 0, behavior: "smooth" });
   });
+
+  on(menuSettings, "click", () => {});
 
   on(clearHistoryBtn, "click", () => {
     resetAllChats();
     renderChatsInHistory();
   });
-
-  function saveProfileAndClose() {
-    const p = {
-      age: profileAge?.value ?? "",
-      nick: profileNick?.value ?? "",
-      bio: profileBio?.value ?? "",
-    };
-    saveProfile(p);
-    closeProfile();
-    initUserInDB();
-  }
-
-  on(closeProfileBtn, "click", saveProfileAndClose);
-  on(profileOverlay, "click", saveProfileAndClose);
 
   // =========================
   // BINDINGS
@@ -811,18 +928,15 @@ async function postJSON(url, payload, timeoutMs = 20000) {
   // BOOT: ensure at least 1 chat exists
   // =========================
   if (!activeChatId) {
-    if (Array.isArray(chatsIndex) && chatsIndex.length) {
-      activeChatId = chatsIndex[0];
-    } else {
+    if (Array.isArray(chatsIndex) && chatsIndex.length) activeChatId = chatsIndex[0];
+    else {
       activeChatId = uuid();
       chatsIndex = [activeChatId];
     }
   }
   ensureChat(activeChatId);
-
   if (!Array.isArray(chatsIndex)) chatsIndex = [activeChatId];
   if (!chatsIndex.includes(activeChatId)) chatsIndex.unshift(activeChatId);
-
   saveChats();
 
   // init UI
@@ -830,11 +944,11 @@ async function postJSON(url, payload, timeoutMs = 20000) {
   renderTasks();
   renderMessages();
   renderChatsInHistory();
-
-  // чистим пустые, но НЕ трогаем активный если юзер не в чате (мы сейчас на home)
   cleanupEmptyChats();
-
   switchScreen("home");
+
+  // if draft exists — allow continue (optional auto-open)
+  // openDraftIfExists();
 
   console.log("[LSD] loaded. activeChatId =", activeChatId);
 });

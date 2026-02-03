@@ -36,7 +36,7 @@ body{
   --wallpaper-filter: none;
 
   /* base bg (under wallpaper) */
-  --bg: linear-gradient(180deg, #cfe9c8, #bfe2b6);
+  --bg: linear-gradient(140deg, #eaf1ab,#cfe9c8, #c5c5a9);
 
   /* text */
   --text: #0f1a12;
@@ -75,12 +75,12 @@ body{
    DARK THEME (only overrides)
 ================================= */
 body.dark{
-  --bg: linear-gradient(180deg, #0f1411, #101a15);
+  --bg: linear-gradient(180deg, #111111, #0a0e0c);
 
   --text: rgba(255,255,255,0.92);
   --muted: rgba(255,255,255,0.62);
 
-  --bar-bg: #2b4f63;
+  --bar-bg: #2b2b2b;
   --bar-text: #ffffff;
 
   --card: #14141c;
@@ -199,8 +199,16 @@ main{
 .buttons{
   flex:1;
   display:flex;
-  justify-content:center;
+  justify-content:end;
   align-items:center;
+
+  img{
+    width: 35px;
+    height: auto;
+    filter: invert(var(--icon-invert));
+    opacity: .95;
+  }
+
 }
 
 .tab{
@@ -209,9 +217,9 @@ main{
   font-size: 18px;
   font-weight: 800;
   color: var(--bar-text);
-  padding: 8px 12px;
   border-radius: 12px;
   cursor:pointer;
+  
 }
 .tab:active{ opacity:.9; transform:scale(.99); }
 .tab span{
@@ -521,13 +529,13 @@ body.dark .chatTitle{
 #planBtn{
   height:56px;
   border-radius: 999px;
-  border: 1px solid rgba(255,255,255,0.60);
-  background: rgba(0,0,0,0.08);
+  border: 1px solid rgba(255, 255, 255, 0.425);
+  background: rgba(0, 0, 0, 0.075);
   color:#fff;
   font-weight: 900;
   padding: 0 14px;
   cursor:pointer;
-  backdrop-filter: blur(12px);
+  backdrop-filter: blur(2px);
 }
 body.dark #planBtn{
   border: 1px solid rgba(255,255,255,0.18);
@@ -998,6 +1006,10 @@ body.dark .tgChatDel{ color: rgba(255,255,255,0.65); }
   box-shadow: 0 10px 22px rgba(0, 0, 0, 0.18);
 }
 
+.plus img{ width: 28px; height: 28px; filter: invert(1); }
+.plus:active{ transform:scale(.98); opacity:.95;
+box-shadow: 0 5px 10px rgba(0, 0, 0, 0.384); }
+
 .plus img {
   width: 28px;
   height: 28px;
@@ -1031,3 +1043,21 @@ body,
 body::before{
   transition: filter .25s ease, opacity .25s ease;
 }
+
+.msgActions{
+  margin-top: 8px;
+  display:flex;
+  gap:8px;
+}
+.msgBtn{
+  border:0;
+  border-radius: 12px;
+  padding: 8px 10px;
+  font-weight: 900;
+  cursor:pointer;
+}
+.msgBtn.accept{ background: var(--accent); color:#fff; }
+.msgBtn.decline{ background: rgba(0,0,0,0.08); color: var(--text); }
+body.dark .msgBtn.decline{ background: rgba(255,255,255,0.12); }
+.msgBtn:active{ transform: scale(.99); opacity:.9; }
+
