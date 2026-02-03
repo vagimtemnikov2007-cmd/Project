@@ -105,6 +105,61 @@ window.addEventListener("DOMContentLoaded", () => {
     return Number.isFinite(n) ? n : null;
   }
 
+  let syncTimer = null;
+
+function scheduleSyncPush() {
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(syncPush, 700);
+}
+
+function roleToWho(role) {
+  return role === "assistant" ? "ai" : "user";
+}
+function whoToRole(who) {
+  return who === "ai" ? "assistant" : "user";
+}
+
+async function syncPush() {
+  const tg_id = getTgIdOrNull();
+  if (!tg_id) return;
+
+  // чаты
+  const chats_upsert = (chatsIndex || [])
+    .filter((id) => chatCache[id])
+    .map((id) => {
+      const c = chatCache[id];
+      return {
+        chat_id: id,
+        title: c?.meta?.title || "Новый чат",
+        emoji: c?.meta?.emoji || "💬",
+        updated_at: new Date(c?.meta?.updatedAt || Date.now()).toISOString(),
+      };
+    });
+
+  // сообщения (последние 80 на чат, без дублей по msg_id)
+  const messages_upsert = [];
+  (chatsIndex || []).forEach((chat_id) => {
+    const arr = (chatCache[chat_id]?.messages || []).slice(-80);
+    arr.forEach((m) => {
+      if (!m.msg_id) m.msg_id = uuid();
+      messages_upsert.push({
+        chat_id,
+        msg_id: m.msg_id,
+        role: whoToRole(m.who), // server expects role
+        content: m.text,        // server expects content
+        created_at: new Date(m.ts || Date.now()).toISOString(),
+      });
+    });
+  });
+
+  await postJSON(`${API_BASE}/api/sync/push`, {
+    tg_id,
+    chats_upsert,
+    messages_upsert,
+    tasks_state: tasksState, // server expects tasks_state
+  });
+}
+
   // =========================
   // NETWORK (with timeout)
   // =========================
@@ -433,24 +488,33 @@ window.addEventListener("DOMContentLoaded", () => {
     createNewChat();
   }
 
-  function pushMsg(who, text) {
-    if (!activeChatId) createNewChat();
+function pushMsg(who, text) {
+  if (!activeChatId) createNewChat();
 
-    const c = getActiveChat();
-    const msg = { who, text: String(text ?? ""), ts: Date.now() };
-    c.messages.push(msg);
+  const c = getActiveChat();
+  const msg = {
+    msg_id: uuid(),               // важно для синка
+    who,                          // "user" | "ai"
+    text: String(text ?? ""),
+    ts: Date.now(),
+  };
 
-    c.meta.updatedAt = Date.now();
-    if (c.meta.title === "Новый чат" && who === "user") {
-      c.meta.title = makeChatTitleFromText(text);
-    }
+  c.messages.push(msg);
 
-    bumpChatToTop(activeChatId);
-    saveChats();
-
-    renderMessages();
-    renderChatsInHistory();
+  c.meta.updatedAt = Date.now();
+  if (c.meta.title === "Новый чат" && who === "user") {
+    c.meta.title = makeChatTitleFromText(text);
   }
+
+  bumpChatToTop(activeChatId);
+  saveChats();
+
+  renderMessages();
+  renderChatsInHistory();
+
+  scheduleSyncPush(); // 🔥 пушим изменения на сервер
+}
+
 
   // =========================
   // RENDER MESSAGES
@@ -638,11 +702,13 @@ window.addEventListener("DOMContentLoaded", () => {
           `;
 
           const cb = row.querySelector("input[type='checkbox']");
-          cb.addEventListener("change", () => {
-            t.done = !!cb.checked;
-            saveTasksState();
-            renderTasks();
-          });
+cb.addEventListener("change", () => {
+  t.done = !!cb.checked;
+  saveTasksState();
+  renderTasks();
+  scheduleSyncPush();
+});
+
 
           body.appendChild(row);
         });
@@ -739,6 +805,7 @@ window.addEventListener("DOMContentLoaded", () => {
 
     saveTasksState();
     renderTasks();
+    scheduleSyncPush();
   }
 
   function renderPlanForAccept(cardsNormalized) {
@@ -949,6 +1016,91 @@ window.addEventListener("DOMContentLoaded", () => {
       dbg("❌ Ошибка initUserInDB: " + String(e?.message || e));
     }
   }
+async function syncPull() {
+  const tg_id = getTgIdOrNull();
+  if (!tg_id) return;
+
+  const { ok, data } = await postJSON(`${API_BASE}/api/sync/pull`, { tg_id });
+  if (!ok) return;
+
+  // 1) чаты
+  if (Array.isArray(data?.chats)) {
+    data.chats.forEach((c) => {
+      const id = c.chat_id;
+      if (!id) return;
+
+      if (!chatCache[id]) chatCache[id] = { meta: {}, messages: [] };
+      chatCache[id].meta = {
+        title: c.title || "Новый чат",
+        emoji: c.emoji || "💬",
+        updatedAt: new Date(c.updated_at || Date.now()).getTime(),
+      };
+
+      if (!chatsIndex.includes(id)) chatsIndex.push(id);
+      ensureChat(id);
+    });
+  }
+
+  // 2) сообщения (server: role/content/created_at)
+  if (Array.isArray(data?.messages)) {
+    const byChat = new Map();
+
+    data.messages.forEach((m) => {
+      const chat_id = m.chat_id;
+      if (!chat_id) return;
+
+      if (!byChat.has(chat_id)) byChat.set(chat_id, []);
+      byChat.get(chat_id).push({
+        msg_id: m.msg_id,
+        who: roleToWho(m.role),
+        text: m.content,
+        ts: new Date(m.created_at || Date.now()).getTime(),
+      });
+    });
+
+    byChat.forEach((arr, chat_id) => {
+      ensureChat(chat_id);
+
+      const existing = new Set(
+        (chatCache[chat_id].messages || []).map((x) => x.msg_id).filter(Boolean),
+      );
+
+      arr.forEach((x) => {
+        if (!x.msg_id) x.msg_id = uuid();
+        if (!existing.has(x.msg_id)) chatCache[chat_id].messages.push(x);
+      });
+
+      // сортировка сообщений по времени (важно)
+      chatCache[chat_id].messages.sort((a, b) => (a.ts || 0) - (b.ts || 0));
+
+      // updatedAt чата = время последнего сообщения
+      const last = chatCache[chat_id].messages[chatCache[chat_id].messages.length - 1];
+      if (last?.ts) chatCache[chat_id].meta.updatedAt = last.ts;
+    });
+  }
+
+  // 3) задачи (server: tasks_state)
+  if (data?.tasks_state && typeof data.tasks_state === "object") {
+    tasksState = data.tasks_state;
+    saveTasksState(); // локальный кэш
+  }
+
+  // 4) индекс чатов по свежести
+  chatsIndex = chatsIndex
+    .filter((id) => chatCache[id])
+    .sort((a, b) => (chatCache[b].meta.updatedAt || 0) - (chatCache[a].meta.updatedAt || 0));
+
+  // активный чат
+  if (!activeChatId || !chatCache[activeChatId]) {
+    activeChatId = chatsIndex[0] || activeChatId;
+  }
+
+  saveChats();
+  renderTasks();
+  renderChatsInHistory();
+  renderMessages();
+}
+
 
   // =========================
   // DRAWER USER INFO INIT
@@ -999,6 +1151,7 @@ window.addEventListener("DOMContentLoaded", () => {
     saveProfile(p);
     closeProfile();
     initUserInDB();
+    syncPull();
   }
 
   on(closeProfileBtn, "click", saveProfileAndClose);
@@ -1055,6 +1208,8 @@ window.addEventListener("DOMContentLoaded", () => {
   cleanupEmptyChats();
 
   switchScreen("home");
+  syncPull();
+  setInterval(syncPull, 30000);
 
   console.log("[LSD] loaded. activeChatId =", activeChatId);
 });

@@ -1284,3 +1284,19 @@ body.dark .taskGroupBody{
   font-weight: 900;
 }
 
+.taskItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.taskItem .taskText {
+  flex: 1 1 auto;   /* текст занимает всё доступное */
+  min-width: 0;     /* ключевое */
+}
+
+/* блок справа (время/сложность) */
+.taskMeta {
+  flex: 0 0 auto;   /* не растягивается */
+  white-space: nowrap;
+}
