@@ -1,4 +1,4 @@
-// LSD Front — OLD UI + Chats list in tgHistoryScroll (historyList)
+// LSD Front — FULL (Chats + Tasks + Auto-delete empty chats + Plan -> Tasks)
 // Drop-in replacement for your current JavaScript.js
 
 window.addEventListener("DOMContentLoaded", () => {
@@ -50,6 +50,16 @@ window.addEventListener("DOMContentLoaded", () => {
     sSet(key, JSON.stringify(obj));
   }
 
+  function escapeHTML(s) {
+    return String(s).replace(/[&<>"']/g, (ch) => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#039;",
+    }[ch]));
+  }
+
   // =========================
   // CONFIG
   // =========================
@@ -62,6 +72,9 @@ window.addEventListener("DOMContentLoaded", () => {
   const STORAGE_ACTIVE_CHAT = "lsd_active_chat_v3";
   const STORAGE_CHATS_INDEX = "lsd_chats_index_v1"; // array of chatIds
   const STORAGE_CHAT_CACHE = "lsd_chat_cache_v3";   // { chatId: { meta, messages } }
+
+  // tasks
+  const STORAGE_TASKS = "lsd_tasks_v1"; // array [{ id, text, done }]
 
   const EMOJIS = ["💬","🧠","⚡","🧩","📌","🎯","🧊","🍀","🌙","☀️","🦊","🐺","🐼","🧪","📚"];
 
@@ -111,7 +124,7 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 
   // =========================
-  // ELEMENTS (your old UI)
+  // ELEMENTS
   // =========================
   const settingsBtn = document.querySelector(".settings_bt");
   const drawer = $("settingsDrawer");
@@ -124,6 +137,9 @@ window.addEventListener("DOMContentLoaded", () => {
   const navBtn = $("navBtn");
   const navBtnText = navBtn?.querySelector("span");
 
+  const tasksListEl = $("tasksList");
+  const clearTasksBtn = $("clearTasks");
+
   const promptEl = $("prompt");
   const sendBtn = $("sendBtn");
 
@@ -131,10 +147,6 @@ window.addEventListener("DOMContentLoaded", () => {
   const chatTypingEl = $("chatTyping");
 
   const planBtn = $("planBtn");
-  const planOverlay = $("planOverlay");
-  const planModal = $("planModal");
-  const planContent = $("planContent");
-  const closePlanBtn = $("closePlan");
 
   const userEl = $("user");
 
@@ -148,10 +160,9 @@ window.addEventListener("DOMContentLoaded", () => {
 
   // drawer menu
   const menuProfile = $("menuProfile");
-  const menuHistory = $("menuHistory");
   const menuSettings = $("menuSettings");
 
-  // history list container (we will render CHATS here)
+  // history list container
   const historyList = $("historyList");
   const clearHistoryBtn = $("clearHistory");
 
@@ -166,10 +177,22 @@ window.addEventListener("DOMContentLoaded", () => {
   const profileBio = $("profileBio");
 
   // =========================
-  // UI: SCREEN SWITCH
+  // STATE
   // =========================
   let currentScreen = "home";
+  let isLoading = false;
 
+  // chats
+  let activeChatId = sGet(STORAGE_ACTIVE_CHAT, "");
+  let chatsIndex = sJSONGet(STORAGE_CHATS_INDEX, []);
+  let chatCache = sJSONGet(STORAGE_CHAT_CACHE, {});
+
+  // tasks
+  let tasks = sJSONGet(STORAGE_TASKS, []);
+
+  // =========================
+  // UI: SCREEN SWITCH
+  // =========================
   function setNavLabel() {
     if (!navBtnText) return;
     navBtnText.textContent = currentScreen === "home" ? "задачи" : "назад";
@@ -180,22 +203,21 @@ window.addEventListener("DOMContentLoaded", () => {
     chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
   }
 
-function switchScreen(name) {
-  // если уходим с экрана chat — чистим пустые чаты
-  if (currentScreen === "chat" && name !== "chat") {
-    cleanupEmptyChats();
+  function switchScreen(name) {
+    // если уходим с экрана chat — чистим пустые чаты
+    if (currentScreen === "chat" && name !== "chat") {
+      cleanupEmptyChats();
+    }
+
+    [screenHome, screenTasks, screenChat].forEach((s) => s && s.classList.remove("active"));
+    const el = name === "home" ? screenHome : name === "tasks" ? screenTasks : screenChat;
+    el && el.classList.add("active");
+
+    currentScreen = name;
+    setNavLabel();
+    updatePlanVisibility();
+    if (name === "chat") scrollToBottom();
   }
-
-  [screenHome, screenTasks, screenChat].forEach((s) => s && s.classList.remove("active"));
-  const el = name === "home" ? screenHome : name === "tasks" ? screenTasks : screenChat;
-  el && el.classList.add("active");
-
-  currentScreen = name;
-  setNavLabel();
-  updatePlanVisibility();
-  if (name === "chat") scrollToBottom();
-}
-
 
   on(navBtn, "click", () => {
     if (currentScreen === "home") switchScreen("tasks");
@@ -247,8 +269,7 @@ function switchScreen(name) {
     drawer?.classList.add("open");
     drawerOverlay?.classList.add("open");
     drawer?.setAttribute("aria-hidden", "false");
-    renderChatsInHistory(); // render chats list every time drawer opens
-
+    renderChatsInHistory();
   }
 
   function closeDrawer() {
@@ -261,32 +282,89 @@ function switchScreen(name) {
   on(drawerOverlay, "click", closeDrawer);
 
   // =========================
-  // CHAT STORAGE (MULTI-CHAT)
+  // TASKS
   // =========================
-  let activeChatId = sGet(STORAGE_ACTIVE_CHAT, "");
-  let chatsIndex = sJSONGet(STORAGE_CHATS_INDEX, []);
-  let chatCache = sJSONGet(STORAGE_CHAT_CACHE, {});
+  function saveTasks() {
+    sJSONSet(STORAGE_TASKS, tasks);
+  }
 
+  function renderTasks() {
+    if (!tasksListEl) return;
+    tasksListEl.innerHTML = "";
+
+    if (!Array.isArray(tasks) || tasks.length === 0) {
+      const li = document.createElement("li");
+      li.className = "taskItem";
+      li.innerHTML = `<div class="taskText">Пока задач нет 🙂</div>`;
+      tasksListEl.appendChild(li);
+      return;
+    }
+
+    tasks.forEach((t) => {
+      const li = document.createElement("li");
+      li.className = "taskItem" + (t.done ? " done" : "");
+
+      li.innerHTML = `
+        <input type="checkbox" ${t.done ? "checked" : ""} />
+        <div class="taskText">${escapeHTML(t.text)}</div>
+      `;
+
+      const cb = li.querySelector("input[type='checkbox']");
+      cb.addEventListener("change", () => {
+        t.done = !!cb.checked;
+        saveTasks();
+        renderTasks();
+      });
+
+      tasksListEl.appendChild(li);
+    });
+  }
+
+  function setTasksFromCards(cards) {
+    const flat = (cards || []).flatMap((card) => (Array.isArray(card?.tasks) ? card.tasks : []));
+    const next = [];
+
+    flat.forEach((t) => {
+      const txt = String(t?.t || "").trim();
+      if (!txt) return;
+      next.push({ id: uuid(), text: txt, done: false });
+    });
+
+    tasks = next;
+    saveTasks();
+    renderTasks();
+  }
+
+  on(clearTasksBtn, "click", () => {
+    tasks = [];
+    saveTasks();
+    renderTasks();
+  });
+
+  // =========================
+  // CHATS STORAGE (MULTI-CHAT)
+  // =========================
   function ensureChat(id) {
+    if (!id) return;
     if (!chatCache[id]) {
       chatCache[id] = {
         meta: { title: "Новый чат", emoji: pickEmoji(), updatedAt: Date.now() },
         messages: [],
       };
-    } else {
-      // migrate old shape
-      if (!chatCache[id].meta) {
-        chatCache[id].meta = { title: "Новый чат", emoji: pickEmoji(), updatedAt: Date.now() };
-      }
-      if (!Array.isArray(chatCache[id].messages) && Array.isArray(chatCache[id].messages?.messages)) {
-        // just in case some weird nesting
-        chatCache[id].messages = chatCache[id].messages.messages;
-      }
-      if (!Array.isArray(chatCache[id].messages)) chatCache[id].messages = [];
-      if (!chatCache[id].meta.updatedAt) chatCache[id].meta.updatedAt = Date.now();
-      if (!chatCache[id].meta.emoji) chatCache[id].meta.emoji = pickEmoji();
-      if (!chatCache[id].meta.title) chatCache[id].meta.title = "Новый чат";
+      return;
     }
+
+    // migrate
+    if (!chatCache[id].meta) {
+      chatCache[id].meta = { title: "Новый чат", emoji: pickEmoji(), updatedAt: Date.now() };
+    }
+    if (!Array.isArray(chatCache[id].messages) && Array.isArray(chatCache[id].messages?.messages)) {
+      chatCache[id].messages = chatCache[id].messages.messages;
+    }
+    if (!Array.isArray(chatCache[id].messages)) chatCache[id].messages = [];
+    if (!chatCache[id].meta.updatedAt) chatCache[id].meta.updatedAt = Date.now();
+    if (!chatCache[id].meta.emoji) chatCache[id].meta.emoji = pickEmoji();
+    if (!chatCache[id].meta.title) chatCache[id].meta.title = "Новый чат";
   }
 
   function saveChats() {
@@ -294,65 +372,6 @@ function switchScreen(name) {
     sJSONSet(STORAGE_CHATS_INDEX, chatsIndex);
     sJSONSet(STORAGE_CHAT_CACHE, chatCache);
   }
-  
-  function cleanupEmptyChats() {
-  // "сидит ли юзер в чате прямо сейчас"
-  const userIsInChatNow = (currentScreen === "chat");
-
-  // удаляем пустые чаты:
-  // - если чат НЕ активный
-  // - ИЛИ он активный, но юзер не на экране chat
-  const toDelete = chatsIndex.filter((id) => {
-    ensureChat(id);
-    const c = chatCache[id];
-    const empty = !c.messages || c.messages.length === 0;
-    const isActive = id === activeChatId;
-
-    return empty && (!isActive || !userIsInChatNow);
-  });
-
-  if (!toDelete.length) return;
-
-  // удаляем из кеша и индекса
-  toDelete.forEach((id) => {
-    delete chatCache[id];
-  });
-  chatsIndex = chatsIndex.filter((id) => !toDelete.includes(id));
-
-  // если удалили активный чат — выбираем новый
-  if (toDelete.includes(activeChatId)) {
-    activeChatId = chatsIndex[0] || "";
-  }
-
-  // если чатов совсем не осталось — создаём новый
-  if (!activeChatId) {
-    const id = uuid();
-    chatCache[id] = {
-      meta: { title: "Новый чат", emoji: pickEmoji(), updatedAt: Date.now() },
-      messages: [],
-    };
-    chatsIndex = [id];
-    activeChatId = id;
-  }
-
-  saveChats();
-  renderChatsInHistory();
-}
-
-function setActiveChat(id) {
-  // если был пустой чат и мы уходим из него — удалим
-  cleanupEmptyChats();
-
-  activeChatId = id;
-  ensureChat(activeChatId);
-  if (!chatsIndex.includes(activeChatId)) chatsIndex.unshift(activeChatId);
-  bumpChatToTop(activeChatId);
-  saveChats();
-
-  renderMessages();
-  renderChatsInHistory();
-}
-
 
   function bumpChatToTop(id) {
     chatsIndex = [id, ...chatsIndex.filter((x) => x !== id)];
@@ -368,7 +387,62 @@ function setActiveChat(id) {
     return getActiveChat().messages || [];
   }
 
+  function makeChatTitleFromText(text) {
+    const t = String(text || "").trim();
+    if (!t) return "Новый чат";
+    return t.length > 22 ? t.slice(0, 22) + "…" : t;
+  }
+
+  function cleanupEmptyChats() {
+    const userIsInChatNow = (currentScreen === "chat");
+
+    const toDelete = chatsIndex.filter((id) => {
+      ensureChat(id);
+      const c = chatCache[id];
+      const empty = !c.messages || c.messages.length === 0;
+      const isActive = id === activeChatId;
+      return empty && (!isActive || !userIsInChatNow);
+    });
+
+    if (!toDelete.length) return;
+
+    toDelete.forEach((id) => delete chatCache[id]);
+    chatsIndex = chatsIndex.filter((id) => !toDelete.includes(id));
+
+    if (toDelete.includes(activeChatId)) {
+      activeChatId = chatsIndex[0] || "";
+    }
+
+    if (!activeChatId) {
+      const id = uuid();
+      chatCache[id] = {
+        meta: { title: "Новый чат", emoji: pickEmoji(), updatedAt: Date.now() },
+        messages: [],
+      };
+      chatsIndex = [id];
+      activeChatId = id;
+    }
+
+    saveChats();
+    renderChatsInHistory();
+  }
+
+  function setActiveChat(id) {
+    cleanupEmptyChats();
+
+    activeChatId = id;
+    ensureChat(activeChatId);
+    if (!chatsIndex.includes(activeChatId)) chatsIndex.unshift(activeChatId);
+    bumpChatToTop(activeChatId);
+    saveChats();
+
+    renderMessages();
+    renderChatsInHistory();
+  }
+
   function createNewChat() {
+    cleanupEmptyChats();
+
     const id = uuid();
     chatCache[id] = {
       meta: { title: "Новый чат", emoji: pickEmoji(), updatedAt: Date.now() },
@@ -383,14 +457,7 @@ function setActiveChat(id) {
     chatsIndex = [];
     activeChatId = "";
     saveChats();
-    // create a fresh one
     createNewChat();
-  }
-
-  function makeChatTitleFromText(text) {
-    const t = String(text || "").trim();
-    if (!t) return "Новый чат";
-    return t.length > 22 ? t.slice(0, 22) + "…" : t;
   }
 
   function pushMsg(who, text) {
@@ -438,14 +505,14 @@ function setActiveChat(id) {
   }
 
   // =========================
-  // RENDER CHATS INSIDE tgHistoryScroll (#historyList)
+  // RENDER CHATS (DRAWER HISTORY)
   // =========================
   function renderChatsInHistory() {
     if (!historyList) return;
 
     historyList.innerHTML = "";
 
-    // 1) "New chat" row (inside history, not on home)
+    // New chat row
     const newRow = document.createElement("div");
     newRow.className = "tgChatRow";
     newRow.innerHTML = `
@@ -465,9 +532,7 @@ function setActiveChat(id) {
     });
     historyList.appendChild(newRow);
 
-    // divider line effect using border in rows already
     if (!chatsIndex.length) {
-      // no chats yet
       const empty = document.createElement("div");
       empty.className = "histMsg ai";
       empty.textContent = "История чатов пустая 🙂";
@@ -475,7 +540,6 @@ function setActiveChat(id) {
       return;
     }
 
-    // 2) actual chat rows
     chatsIndex.forEach((id) => {
       ensureChat(id);
       const c = chatCache[id];
@@ -483,9 +547,10 @@ function setActiveChat(id) {
 
       const row = document.createElement("div");
       row.className = "tgChatRow";
-      if (id === activeChatId) row.style.background = "rgba(0,0,0,0.03)";
 
-      const unread = ""; // можно позже сделать счётчик непрочитанных
+      if (id === activeChatId) {
+        row.style.background = "rgba(0,0,0,0.03)";
+      }
 
       row.innerHTML = `
         <div class="tgEmojiAvatar">${c.meta.emoji || "💬"}</div>
@@ -495,7 +560,6 @@ function setActiveChat(id) {
         </div>
         <div class="tgChatRight">
           <div class="tgChatTime">${fmtTime(c.meta.updatedAt || Date.now())}</div>
-          ${unread}
         </div>
       `;
 
@@ -509,149 +573,62 @@ function setActiveChat(id) {
     });
   }
 
-  function escapeHTML(s) {
-    return String(s).replace(/[&<>"']/g, (ch) => ({
-      "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"
-    }[ch]));
-  }
-
   // =========================
-  // PLAN MODAL
+  // PLAN -> TASKS (NO MODAL)
   // =========================
-  function openPlanModal(contentNodeOrHTML) {
-    if (!planOverlay || !planModal || !planContent) return;
+  async function createPlan() {
+    if (isLoading) return;
 
-    if (typeof contentNodeOrHTML === "string") {
-      planContent.innerHTML = contentNodeOrHTML;
-    } else {
-      planContent.innerHTML = "";
-      planContent.appendChild(contentNodeOrHTML);
-    }
-
-    planOverlay.classList.add("open");
-    planModal.classList.add("open");
-  }
-
-  function closePlanModal() {
-    planOverlay?.classList.remove("open");
-    planModal?.classList.remove("open");
-  }
-
-  on(closePlanBtn, "click", closePlanModal);
-  on(planOverlay, "click", closePlanModal);
-  
-function renderPlanIntoTasks(cards) {
-  const ul = $("tasksList");
-  if (!ul) return;
-
-  ul.innerHTML = "";
-
-  const flat = (cards || []).flatMap((card) => (Array.isArray(card?.tasks) ? card.tasks : []));
-
-  if (!flat.length) {
-    const li = document.createElement("li");
-    li.className = "taskItem";
-    li.innerHTML = `<div class="taskText">План пустой 🙂</div>`;
-    ul.appendChild(li);
-    return;
-  }
-
-  flat.forEach((t) => {
-    const txt = String(t?.t || "").trim();
-    if (!txt) return;
-
-    const li = document.createElement("li");
-    li.className = "taskItem";
-
-    li.innerHTML = `
-      <input type="checkbox" />
-      <div class="taskText">${escapeHTML(txt)}</div>
-    `;
-
-    ul.appendChild(li);
-  });
-}
-
-  function renderPlanCards(cards) {
-    const wrap = document.createElement("div");
-    wrap.className = "cardsArea";
-
-    (cards || []).forEach((card, idx) => {
-      const box = document.createElement("div");
-      box.className = "cardBox";
-
-      const title = document.createElement("h3");
-      title.className = "cardTitle";
-      title.textContent = card?.title ? String(card.title) : `План #${idx + 1}`;
-
-      const ul = document.createElement("ul");
-      ul.className = "cardTasks";
-
-      const tasks = Array.isArray(card?.tasks) ? card.tasks : [];
-      tasks.forEach((t) => {
-        const txt = String(t?.t || "").trim();
-        if (!txt) return;
-
-        const li = document.createElement("li");
-        li.className = "cardTask";
-
-        const left = document.createElement("div");
-        left.textContent = txt;
-
-        const right = document.createElement("div");
-        right.className = "taskMeta";
-
-        const meta = [];
-        if (Number.isFinite(Number(t?.min))) meta.push(`${Number(t.min)}м`);
-        if (t?.energy) meta.push(String(t.energy));
-        right.textContent = meta.join(" • ");
-
-        li.appendChild(left);
-        li.appendChild(right);
-        ul.appendChild(li);
-      });
-
-      box.appendChild(title);
-      box.appendChild(ul);
-      wrap.appendChild(box);
-    });
-
-    return wrap;
-  }
-
-  // =========================
-  // INIT USER IN DB (on app open)
-  // =========================
-  async function initUserInDB() {
     const tg_id = getTgIdOrNull();
-    dbg("initUserInDB: tg_id=" + tg_id);
-
     if (!tg_id) {
-      dbg("❌ Нет tg_id. Открыто НЕ внутри Telegram или нет user в initDataUnsafe.");
+      dbg("❌ Открой внутри Telegram (нет tg_id)");
       return;
     }
 
-    try {
-      const profile = loadProfile();
-      dbg("➡️ Отправляю /api/user/init ...");
+    if (messages().length < 2) {
+      dbg("🙂 Мало переписки для плана");
+      return;
+    }
 
-      const { ok, status, data } = await postJSON(`${API_BASE}/api/user/init`, {
+    isLoading = true;
+    if (planBtn) planBtn.disabled = true;
+
+    try {
+      dbg("Создаю план…");
+
+      const profile = loadProfile();
+      const { ok, status, data } = await postJSON(`${API_BASE}/api/plan/create`, {
         tg_id,
+        chat_id: activeChatId,
         profile,
       });
 
-      dbg(`⬅️ Ответ: ok=${ok} status=${status}`);
-      if (!ok) dbg("init error: " + (data?.error || "unknown"));
+      if (!ok) {
+        dbg("❌ Ошибка плана: " + (data?.error || `status_${status}`));
+        return;
+      }
+
+      const cards = Array.isArray(data?.cards) ? data.cards : [];
+      if (!cards.length) {
+        dbg("🙂 План пустой (AI вернул 0 карточек)");
+        return;
+      }
+
+      setTasksFromCards(cards);
+      dbg("✅ План добавлен в задачи");
+      switchScreen("tasks");
     } catch (e) {
-      dbg("❌ Ошибка initUserInDB: " + String(e?.message || e));
+      console.log("PLAN ERROR:", e);
+      dbg("❌ Не удалось подключиться к серверу");
+    } finally {
+      isLoading = false;
+      if (planBtn) planBtn.disabled = false;
     }
   }
 
   // =========================
   // SEND MESSAGE (ACTIVE CHAT)
   // =========================
-  let isLoading = false;
-
   async function sendMessage() {
     if (isLoading) return;
 
@@ -699,55 +676,30 @@ function renderPlanIntoTasks(cards) {
   }
 
   // =========================
-  // CREATE PLAN
+  // INIT USER IN DB (on app open)
   // =========================
-  async function createPlan() {
-    if (isLoading) return;
-
+  async function initUserInDB() {
     const tg_id = getTgIdOrNull();
+    dbg("initUserInDB: tg_id=" + tg_id);
+
     if (!tg_id) {
-      openPlanModal("<div class='historyItem'>Открой внутри Telegram (нет tg_id)</div>");
+      dbg("❌ Нет tg_id. Открыто НЕ внутри Telegram или нет user в initDataUnsafe.");
       return;
     }
-
-    if (messages().length < 2) {
-      openPlanModal("<div class='historyItem'>Мало переписки для плана 🙂</div>");
-      return;
-    }
-
-    isLoading = true;
-    if (planBtn) planBtn.disabled = true;
 
     try {
-      openPlanModal("<div class='historyItem'>Создаю план…</div>");
-
       const profile = loadProfile();
-      const { ok, status, data } = await postJSON(`${API_BASE}/api/plan/create`, {
+      dbg("➡️ /api/user/init ...");
+
+      const { ok, status, data } = await postJSON(`${API_BASE}/api/user/init`, {
         tg_id,
-        chat_id: activeChatId,
         profile,
       });
 
-      if (!ok) {
-        openPlanModal("<div class='historyItem'>Ошибка: " + (data?.error || `status_${status}`) + "</div>");
-        return;
-      }
-
-      const cards = Array.isArray(data?.cards) ? data.cards : [];
-      if (!cards.length) {
-        openPlanModal("<div class='historyItem'>План пустой. Напиши больше деталей 🙂</div>");
-        return;
-      }
-
-      renderPlanIntoTasks(cards);
-      switchScreen("tasks");
-
+      dbg(`⬅️ init ok=${ok} status=${status}`);
+      if (!ok) dbg("init error: " + (data?.error || "unknown"));
     } catch (e) {
-      console.log("PLAN ERROR:", e);
-      openPlanModal("<div class='historyItem'>Не удалось подключиться к серверу.</div>");
-    } finally {
-      isLoading = false;
-      if (planBtn) planBtn.disabled = false;
+      dbg("❌ Ошибка initUserInDB: " + String(e?.message || e));
     }
   }
 
@@ -762,10 +714,8 @@ function renderPlanIntoTasks(cards) {
     if (drawerPhone) drawerPhone.textContent = u?.id ? `ID: ${u.id}` : "ID: —";
     if (drawerAvatar && u?.photo_url) drawerAvatar.src = u.photo_url;
 
-    // profile modal name field (readonly)
     if (profileName) profileName.value = u?.first_name ? u.first_name : "User";
 
-    // fill saved profile fields
     const p = loadProfile();
     if (profileAge) profileAge.value = p.age ?? "";
     if (profileNick) profileNick.value = p.nick ?? "";
@@ -775,30 +725,23 @@ function renderPlanIntoTasks(cards) {
   }
 
   // =========================
-  // MENU BUTTONS
+  // MENU + PROFILE SAVE
   // =========================
   on(menuProfile, "click", () => {
     closeDrawer();
     openProfile();
   });
 
-  on(menuHistory, "click", () => {
-    // просто скролл к списку чатов
-    historyList?.scrollTo({ top: 0, behavior: "smooth" });
-  });
-
   on(menuSettings, "click", () => {
-    // пока пусто — можешь потом добавить
+    // пока пусто
   });
 
-  // clear chats history
   on(clearHistoryBtn, "click", () => {
     resetAllChats();
     renderChatsInHistory();
   });
 
-  // save profile on close (чтобы не добавлять кнопки)
-  on(closeProfileBtn, "click", () => {
+  function saveProfileAndClose() {
     const p = {
       age: profileAge?.value ?? "",
       nick: profileNick?.value ?? "",
@@ -807,23 +750,16 @@ function renderPlanIntoTasks(cards) {
     saveProfile(p);
     closeProfile();
     initUserInDB();
-  });
+  }
 
-  on(profileOverlay, "click", () => {
-    const p = {
-      age: profileAge?.value ?? "",
-      nick: profileNick?.value ?? "",
-      bio: profileBio?.value ?? "",
-    };
-    saveProfile(p);
-    closeProfile();
-    initUserInDB();
-  });
+  on(closeProfileBtn, "click", saveProfileAndClose);
+  on(profileOverlay, "click", saveProfileAndClose);
 
   // =========================
   // BINDINGS
   // =========================
   on(sendBtn, "click", sendMessage);
+
   on(promptEl, "keydown", (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -853,7 +789,6 @@ function renderPlanIntoTasks(cards) {
   // BOOT: ensure at least 1 chat exists
   // =========================
   if (!activeChatId) {
-    // if we have chatsIndex, take first
     if (Array.isArray(chatsIndex) && chatsIndex.length) {
       activeChatId = chatsIndex[0];
     } else {
@@ -862,14 +797,22 @@ function renderPlanIntoTasks(cards) {
     }
   }
   ensureChat(activeChatId);
+
+  if (!Array.isArray(chatsIndex)) chatsIndex = [activeChatId];
+  if (!chatsIndex.includes(activeChatId)) chatsIndex.unshift(activeChatId);
+
   saveChats();
 
   // init UI
   initDrawerUser();
-  switchScreen("home");
+  renderTasks();
   renderMessages();
   renderChatsInHistory();
+
+  // чистим пустые, но НЕ трогаем активный если юзер не в чате (мы сейчас на home)
   cleanupEmptyChats();
+
+  switchScreen("home");
 
   console.log("[LSD] loaded. activeChatId =", activeChatId);
 });
