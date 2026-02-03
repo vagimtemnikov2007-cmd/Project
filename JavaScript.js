@@ -951,6 +951,7 @@ cb.addEventListener("change", () => {
 
     switchScreen("chat");
     pushMsg("user", text);
+    
     if (promptEl) promptEl.value = "";
 
     const tg_id = getTgIdOrNull();
@@ -965,13 +966,17 @@ cb.addEventListener("change", () => {
 
     try {
       const profile = loadProfile();
+const last = getMessages().slice(-1)[0];
+const msg_id = last?.msg_id; // тот что сгенерился в pushMsg
 
-      const { ok, status, data } = await postJSON(`${API_BASE}/api/chat/send`, {
-        tg_id,
-        chat_id: activeChatId,
-        text,
-        profile,
-      });
+const { ok, status, data } = await postJSON(`${API_BASE}/api/chat/send`, {
+  tg_id,
+  chat_id: activeChatId,
+  text,
+  profile,
+  msg_id, // ✅ добавили
+});
+
 
       if (!ok) {
         pushMsg("ai", "Ошибка сервера: " + (data?.error || `status_${status}`));
@@ -987,6 +992,7 @@ cb.addEventListener("change", () => {
       if (sendBtn) sendBtn.disabled = false;
       if (chatTypingEl) chatTypingEl.hidden = true;
     }
+    
   }
 
   // =========================
