@@ -539,6 +539,38 @@ function setActiveChat(id) {
 
   on(closePlanBtn, "click", closePlanModal);
   on(planOverlay, "click", closePlanModal);
+  
+function renderPlanIntoTasks(cards) {
+  const ul = $("tasksList");
+  if (!ul) return;
+
+  ul.innerHTML = "";
+
+  const flat = (cards || []).flatMap((card) => (Array.isArray(card?.tasks) ? card.tasks : []));
+
+  if (!flat.length) {
+    const li = document.createElement("li");
+    li.className = "taskItem";
+    li.innerHTML = `<div class="taskText">План пустой 🙂</div>`;
+    ul.appendChild(li);
+    return;
+  }
+
+  flat.forEach((t) => {
+    const txt = String(t?.t || "").trim();
+    if (!txt) return;
+
+    const li = document.createElement("li");
+    li.className = "taskItem";
+
+    li.innerHTML = `
+      <input type="checkbox" />
+      <div class="taskText">${escapeHTML(txt)}</div>
+    `;
+
+    ul.appendChild(li);
+  });
+}
 
   function renderPlanCards(cards) {
     const wrap = document.createElement("div");
@@ -707,7 +739,9 @@ function setActiveChat(id) {
         return;
       }
 
-      openPlanModal(renderPlanCards(cards));
+      renderPlanIntoTasks(cards);
+      switchScreen("tasks");
+
     } catch (e) {
       console.log("PLAN ERROR:", e);
       openPlanModal("<div class='historyItem'>Не удалось подключиться к серверу.</div>");
