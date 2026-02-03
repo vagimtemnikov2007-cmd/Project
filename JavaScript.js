@@ -105,14 +105,22 @@ window.addEventListener("DOMContentLoaded", () => {
     return Number.isFinite(n) ? n : null;
   }
 
-  async function postJSON(url, payload) {
+async function postJSON(url, payload, timeoutMs = 20000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    dbg("➡️ fetch: " + url);
+
     const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
+      signal: controller.signal,
     });
 
     const raw = await res.text();
+
     let data = null;
     try {
       data = raw ? JSON.parse(raw) : null;
@@ -120,8 +128,20 @@ window.addEventListener("DOMContentLoaded", () => {
       data = { error: "bad_json_from_server", raw };
     }
 
+    dbg(`⬅️ status=${res.status} ok=${res.ok}`);
     return { ok: res.ok, status: res.status, data };
+  } catch (e) {
+    const msg =
+      e?.name === "AbortError"
+        ? `timeout_${timeoutMs}ms`
+        : String(e?.message || e);
+
+    dbg("❌ fetch error: " + msg);
+    return { ok: false, status: 0, data: { error: msg } };
+  } finally {
+    clearTimeout(timer);
   }
+}
 
   // =========================
   // ELEMENTS
@@ -648,6 +668,8 @@ window.addEventListener("DOMContentLoaded", () => {
     isLoading = true;
     if (sendBtn) sendBtn.disabled = true;
     if (chatTypingEl) chatTypingEl.hidden = false;
+    dbg("🧠 AI печатает… (жду ответ)");
+
 
     try {
       const profile = loadProfile();
