@@ -1,223 +1,192 @@
 <!doctype html>
 <html lang="ru">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="stylesheet" href="style.css" />
-    <title>Mini App</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  </head>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mini App</title>
 
-  <body>
-    <header class="header">
-      <button class="settings_bt" type="button">
-        <img src="img/settings.svg" alt="" />
-      </button>
-      <div
-        id="debugLine"
-        style="
-          font: 12px/1.4 Arial;
-          opacity: 0.7;
-          padding: 6px 10px;
-          word-break: break-all;
-        "
-      ></div>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
 
-      <div class="buttons">
-        <button class="tab" id="navBtn" type="button">
-          <span>задачи</span>
-        </button>
-      </div>
-    </header>
+<body>
+  <!-- HEADER -->
+  <header class="header">
+    <button class="settings_bt" id="openDrawer" type="button" aria-label="Меню">
+      <img src="img/menu-icon.svg" alt="" />
+    </button>
 
-    <main>
-      <!-- ЭКРАН 1: ГЛАВНАЯ -->
-      <section class="screen active" id="screen-home">
-        <div class="LSD">
-          <h1>LSD | AI Time Manager</h1>
-        </div>
+    <div id="debugLine" class="debugLine"></div>
 
-        <div class="name">
-          <h1 id="user">...</h1>
-        </div>
-
-        <img src="/img/messenger.png" alt="" class="chat-img" />
-        <!-- CHAT (появится после первого сообщения) -->
-      </section>
-
-      <!-- ЭКРАН 2: ЗАДАЧИ -->
-      <section class="screen" id="screen-tasks">
-        <div class="tasksBox">
-          <div class="tasksHeader">
-            <h2>Задачи</h2>
-            <button class="clearBtn" id="clearTasks" type="button">
-              Очистить
-            </button>
-          </div>
-
-          <ul class="tasksList" id="tasksList"></ul>
-          <p class="tasksHint">Задачи появятся тут после запроса на главной.</p>
-        </div>
-      </section>
-
-      <!-- ЭКРАН 3: ЧАТ -->
-      <section class="screen" id="screen-chat">
-        <div class="chatTop">
-          <div class="chatTitle">LSD | AI Time Manager</div>
-        </div>
-
-        <div class="chatMessages" id="chatMessages"></div>
-        <div class="chatTyping" id="chatTyping" hidden>AI печатает…</div>
-      </section>
-    </main>
-    <div class="plan">
-      <button class="plan_bt" id="planBtn" type="button" hidden>
-        Создать план
+    <div class="buttons">
+      <button class="tab" id="navBtn" type="button">
+        <span>задачи</span>
       </button>
     </div>
-    <footer class="footer">
-      <div class="poisk">
-        <input id="prompt" type="text" placeholder="Спроси LSD..." />
+  </header>
 
-        <button class="search_bt" id="sendBtn" type="button">
-          <img src="img/search.svg" alt="" />
-        </button>
-      </div>
-    </footer>
-
-    <!-- LEFT DRAWER SETTINGS (вынесен из main) -->
-    <div class="drawerOverlay" id="drawerOverlay"></div>
-
-    <aside class="drawer" id="settingsDrawer" aria-hidden="true">
-      <!-- TOP BLUE PANEL -->
-      <div class="tgDrawerTop">
-        <div class="tgDrawerTopRow">
-          <img
-            id="drawerAvatar"
-            class="tgDrawerAvatar"
-            src="img/Avatar.svg"
-            alt="avatar"
-          />
-          <button
-            class="tgThemeMiniBtn"
-            id="themeMiniBtn"
-            type="button"
-            aria-label="Тема"
-          >
-            🌙
-          </button>
-        </div>
-
-        <div class="tgDrawerName" id="drawerName">User</div>
-        <div class="tgDrawerPhone" id="drawerPhone">ID: —</div>
+  <!-- MAIN -->
+  <main>
+    <!-- SCREEN: HOME -->
+    <section class="screen active" id="screen-home">
+      <div class="LSD">
+        <h1>LSD | AI Time Manager</h1>
       </div>
 
-      <!-- MENU -->
-      <div class="tgMenu">
-        <button class="tgMenuItem" id="menuProfile" type="button">
-          <span class="tgMenuIcon">👤</span
-          ><span class="tgMenuText">Мой профиль</span>
-        </button>
-
-        <button class="tgMenuItem" id="menuSettings" type="button">
-          <span class="tgMenuIcon">⚙️</span
-          ><span class="tgMenuText">Настройки</span>
-        </button>
+      <div class="name">
+        <h1 id="user">...</h1>
       </div>
 
-      <!-- HISTORY SCROLLFRAME (не меняет layout) -->
-      <div class="tgHistoryBlock">
-        <div class="tgHistoryHeader">
-          <div class="tgHistoryTitle">История запросов</div>
-          <button class="tgHistoryClear" id="clearHistory" type="button">
-            Очистить
-          </button>
+      <img src="img/messenger.png" alt="" class="chat-img" />
+    </section>
+
+    <!-- SCREEN: TASKS -->
+    <section class="screen" id="screen-tasks">
+      <div class="tasksBox">
+        <div class="tasksHeader">
+          <h2>Задачи</h2>
+          <button class="clearBtn" id="clearTasks" type="button">Очистить</button>
         </div>
 
-        <div class="tgHistoryScroll" id="historyList">
-          <!-- JS будет вставлять "как чат" -->
-        </div>
-      </div>
-    </aside>
-
-    <!-- PROFILE MODAL -->
-    <div class="profileOverlay" id="profileOverlay"></div>
-
-    <section class="profileModal" id="profileModal" aria-hidden="true">
-      <div class="profileHeader">
-        <h2 class="profileTitle">Профиль</h2>
-        <button class="profileClose" id="closeProfile" type="button">✕</button>
-      </div>
-
-      <!-- Avatar half screen -->
-      <div class="profileAvatarWrap">
-        <img id="profileAvatar" src="img/Avatar.svg" alt="avatar" />
-        <div class="pass">
-          <h2>версия : Бесплатная</h2>
-          <button>Обновить План</button>
-        </div>
-      </div>
-
-      <div class="profileCard">
-        <div class="field">
-          <label>Имя</label>
-          <input id="profileName" type="text" readonly />
-        </div>
-
-        <div class="field">
-          <label>Возраст (для AI, можно менять)</label>
-          <input
-            id="profileAge"
-            type="number"
-            min="0"
-            max="120"
-            placeholder="Например: 19"
-          />
-        </div>
-
-        <div class="field">
-          <label>Псевдоним (для AI)</label>
-          <input
-            id="profileNick"
-            type="text"
-            placeholder="Например: Симпапусик"
-          />
-        </div>
-
-        <div class="field">
-          <label>Информация о себе (для AI)</label>
-          <textarea
-            id="profileBio"
-            rows="3"
-            placeholder="Коротко: кто ты, чем занимаешься, какие цели..."
-          ></textarea>
-        </div>
+        <ul class="tasksList" id="tasksList"></ul>
+        <p class="tasksHint">Задачи появятся тут после запроса на главной.</p>
       </div>
     </section>
 
-    <div class="aiOverlay" id="aiOverlay"></div>
-
-    <section class="aiModal" id="aiModal" aria-hidden="true">
-      <div class="aiModalHeader">
-        <h2>Ответ LSD</h2>
-        <button id="closeAi" type="button">✕</button>
+    <!-- SCREEN: CHAT -->
+    <section class="screen" id="screen-chat">
+      <div class="chatTop">
+        <div class="chatTitle">LSD | AI Time Manager</div>
       </div>
-      <pre class="aiText" id="aiText"></pre>
+
+      <div class="chatMessages" id="chatMessages"></div>
+      <div class="chatTyping" id="chatTyping" hidden>AI печатает…</div>
     </section>
+  </main>
 
-    <div class="planOverlay" id="planOverlay"></div>
+  <!-- PLAN BUTTON (fixed area) -->
+  <div class="plan">
+    <button class="plan_bt" id="planBtn" type="button" hidden>Создать план</button>
+  </div>
 
-    <section class="planModal" id="planModal" aria-hidden="true">
-      <div class="planHeader">
-        <h2>План</h2>
-        <button id="closePlan" type="button">✕</button>
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="poisk">
+      <button class="plus" id="plusBtn" type="button" aria-label="Плюс">
+        <img src="img/plus-svgrepo-com.svg" alt="" />
+      </button>
+
+      <input id="prompt" type="text" placeholder="Спроси LSD..." />
+
+      <button class="search_bt" id="sendBtn" type="button" aria-label="Отправить">
+        <img src="img/search.svg" alt="" />
+      </button>
+    </div>
+  </footer>
+
+  <!-- DRAWER OVERLAY -->
+  <div class="drawerOverlay" id="drawerOverlay"></div>
+
+  <!-- LEFT DRAWER -->
+  <aside class="drawer" id="settingsDrawer" aria-hidden="true">
+    <div class="tgDrawerTop">
+      <div class="tgDrawerTopRow">
+        <img id="drawerAvatar" class="tgDrawerAvatar" src="img/Avatar.svg" alt="avatar" />
+
+        <button class="tgThemeMiniBtn" id="themeMiniBtn" type="button" aria-label="Тема">
+          🌙
+        </button>
       </div>
 
-      <div class="planContent" id="planContent">
-        <!-- сюда JS вставит карточки -->
-      </div>
-    </section>
+      <div class="tgDrawerName" id="drawerName">User</div>
+      <div class="tgDrawerPhone" id="drawerPhone">ID: —</div>
+    </div>
 
-    <script src="./JavaScript.js" defer></script>
-  </body>
+    <div class="tgMenu">
+      <button class="tgMenuItem" id="menuProfile" type="button">
+        <span class="tgMenuIcon">👤</span>
+        <span class="tgMenuText">Мой профиль</span>
+      </button>
+
+      <button class="tgMenuItem" id="menuSettings" type="button">
+        <span class="tgMenuIcon">⚙️</span>
+        <span class="tgMenuText">Настройки</span>
+      </button>
+    </div>
+
+    <div class="tgHistoryBlock">
+      <div class="tgHistoryHeader">
+        <div class="tgHistoryTitle">История запросов</div>
+        <button class="tgHistoryClear" id="clearHistory" type="button">Очистить</button>
+      </div>
+
+      <div class="tgHistoryScroll" id="historyList"></div>
+    </div>
+  </aside>
+
+  <!-- PROFILE MODAL -->
+  <div class="profileOverlay" id="profileOverlay"></div>
+
+  <section class="profileModal" id="profileModal" aria-hidden="true">
+    <div class="profileHeader">
+      <h2 class="profileTitle">Профиль</h2>
+      <button class="profileClose" id="closeProfile" type="button">✕</button>
+    </div>
+
+    <div class="profileAvatarWrap">
+      <img id="profileAvatar" src="img/Avatar.svg" alt="avatar" />
+      <div class="pass">
+        <h2>версия : Бесплатная</h2>
+        <button type="button">Обновить План</button>
+      </div>
+    </div>
+
+    <div class="profileCard">
+      <div class="field">
+        <label>Имя</label>
+        <input id="profileName" type="text" readonly />
+      </div>
+
+      <div class="field">
+        <label>Возраст (для AI, можно менять)</label>
+        <input id="profileAge" type="number" min="0" max="120" placeholder="Например: 19" />
+      </div>
+
+      <div class="field">
+        <label>Псевдоним (для AI)</label>
+        <input id="profileNick" type="text" placeholder="Например: Симпапусик" />
+      </div>
+
+      <div class="field">
+        <label>Информация о себе (для AI)</label>
+        <textarea id="profileBio" rows="3" placeholder="Коротко: кто ты, чем занимаешься, какие цели..."></textarea>
+      </div>
+    </div>
+  </section>
+
+  <!-- AI MODAL -->
+  <div class="aiOverlay" id="aiOverlay"></div>
+
+  <section class="aiModal" id="aiModal" aria-hidden="true">
+    <div class="aiModalHeader">
+      <h2>Ответ LSD</h2>
+      <button id="closeAi" type="button">✕</button>
+    </div>
+    <pre class="aiText" id="aiText"></pre>
+  </section>
+
+  <!-- PLAN MODAL -->
+  <div class="planOverlay" id="planOverlay"></div>
+
+  <section class="planModal" id="planModal" aria-hidden="true">
+    <div class="planHeader">
+      <h2>План</h2>
+      <button id="closePlan" type="button">✕</button>
+    </div>
+
+    <div class="planContent" id="planContent"></div>
+  </section>
+
+  <script src="./JavaScript.js" defer></script>
+</body>
 </html>
