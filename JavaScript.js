@@ -166,6 +166,39 @@ window.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  async function postForm(url, formData, timeoutMs = 60000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    dbg("➡️ " + url);
+
+    const res = await fetch(url, {
+      method: "POST",
+      body: formData,
+      signal: controller.signal,
+    });
+
+    const raw = await res.text();
+    let data = null;
+
+    try {
+      data = raw ? JSON.parse(raw) : null;
+    } catch {
+      data = { error: "bad_json_from_server", raw };
+    }
+
+    dbg(`⬅️ status=${res.status} ok=${res.ok}`);
+    return { ok: res.ok, status: res.status, data };
+  } catch (e) {
+    const msg = e?.name === "AbortError" ? `timeout_${timeoutMs}ms` : String(e?.message || e);
+    dbg("❌ fetch error: " + msg);
+    return { ok: false, status: 0, data: { error: msg } };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
   // =========================
   // ELEMENTS
   // =========================
@@ -1243,6 +1276,124 @@ window.addEventListener("DOMContentLoaded", () => {
   });
 
   on(planBtn, "click", createPlan);
+
+  // ===============================
+// Attach menu (plus button)
+// ===============================
+
+const plusBtn = document.getElementById("plusBtn");
+const attach = document.getElementById("attach");
+const panel = attach?.querySelector(".attach__panel");
+
+const pickPhoto = document.getElementById("pickPhoto");
+const pickFile = document.getElementById("pickFile");
+
+function openAttach() {
+  if (!attach) return;
+  attach.classList.add("is-open");
+  attach.setAttribute("aria-hidden", "false");
+}
+
+function closeAttach() {
+  if (!attach) return;
+  attach.classList.remove("is-open");
+  attach.setAttribute("aria-hidden", "true");
+}
+
+function toggleAttach() {
+  if (!attach) return;
+  attach.classList.contains("is-open") ? closeAttach() : openAttach();
+}
+
+plusBtn?.addEventListener("click", (e) => {
+  e.stopPropagation();
+  toggleAttach();
+});
+
+// Клик по затемнению — закрыть
+attach?.addEventListener("click", () => closeAttach());
+
+// Клик внутри панели — не закрывать (чтобы label работал)
+panel?.addEventListener("click", (e) => e.stopPropagation());
+
+// Esc — закрыть
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") closeAttach();
+});
+
+// После выбора файла — закрываем меню и обрабатываем
+pickPhoto?.addEventListener("change", () => {
+  const file = pickPhoto.files?.[0];
+  if (!file) return;
+  closeAttach();
+  sendAttachment({ file, kind: "photo" });
+  pickPhoto.value = ""; // чтобы можно было выбрать тот же файл снова
+});
+
+pickFile?.addEventListener("change", () => {
+  const file = pickFile.files?.[0];
+  if (!file) return;
+  closeAttach();
+  sendAttachment({ file, kind: "file" });
+  pickFile.value = "";
+});
+
+
+
+async function sendAttachment({ file, kind }) {
+  if (isLoading) return;
+
+  const tg_id = getTgIdOrNull();
+  if (!tg_id) {
+    pushMsg("ai", "Открой мини-апп внутри Telegram, иначе tg_id не приходит.");
+    return;
+  }
+
+  // 1) показываем в чате “вложение”
+  switchScreen("chat");
+  const label = kind === "photo" ? `📷 Фото: ${file.name}` : `📎 Файл: ${file.name}`;
+  pushMsg("user", label);
+
+  // 2) готовим form-data
+  const fd = new FormData();
+  fd.append("tg_id", String(tg_id));
+  fd.append("chat_id", String(activeChatId));
+  fd.append("kind", kind); // "photo" | "file"
+  fd.append("file", file);
+
+  // можно прикрепить текст-пояснение (если хочешь)
+  // fd.append("text", "Проанализируй вложение.");
+
+  // profile можно тоже отправить (если серверу надо)
+  fd.append("profile", JSON.stringify(loadProfile() || {}));
+
+  isLoading = true;
+  if (sendBtn) sendBtn.disabled = true;
+  if (chatTypingEl) chatTypingEl.hidden = false;
+
+  try {
+    const { ok, status, data } = await postForm(`${API_BASE}/api/chat/attach`, fd);
+
+    if (!ok) {
+      pushMsg("ai", "Ошибка сервера: " + (data?.error || `status_${status}`));
+      return;
+    }
+
+    // если сервер вернул points — обновим
+    if (Number.isFinite(Number(data?.points))) {
+      points = Number(data.points);
+      savePointsCache ? savePointsCache() : (sSet(STORAGE_POINTS, String(points)), renderPointsBar());
+    }
+
+    pushMsg("ai", String(data?.text || "").trim() || "AI вернул пустой ответ 😶");
+  } catch (e) {
+    pushMsg("ai", "Не удалось подключиться к серверу.");
+  } finally {
+    isLoading = false;
+    if (sendBtn) sendBtn.disabled = false;
+    if (chatTypingEl) chatTypingEl.hidden = true;
+  }
+}
 
   // =========================
   // BOOT

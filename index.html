@@ -44,7 +44,10 @@
     </section>
 
     <!-- SCREEN: TASKS -->
-     <div class="pointsBar" id="pointsBar">
+
+
+    <section class="screen" id="screen-tasks">
+           <div class="pointsBar" id="pointsBar">
   <div class="pointsLeft">
     <div class="cup">🏆</div>
     <div class="pointsText">
@@ -53,8 +56,6 @@
     </div>
   </div>
 </div>
-
-    <section class="screen" id="screen-tasks">
       <div class="tasksBox">
         <div class="tasksHeader">
           <h2>Задачи</h2>
@@ -199,6 +200,30 @@
 
     <div class="planContent" id="planContent"></div>
   </section>
+
+  <!-- PLUS ATTACH MENU (Telegram-like) -->
+<div class="attach" id="attach" aria-hidden="true">
+  <div class="attach__panel" role="menu" aria-label="Вложения">
+    <!-- Фото -->
+    <label class="attach__item" role="menuitem">
+      <span class="attach__icon" aria-hidden="true">📷</span>
+      <span class="attach__text">Фото</span>
+      <input
+        id="pickPhoto"
+        class="attach__input"
+        type="file"
+        accept="image/*"
+      />
+    </label>
+
+    <!-- Файл -->
+    <label class="attach__item" role="menuitem">
+      <span class="attach__icon" aria-hidden="true">📎</span>
+      <span class="attach__text">Файл</span>
+      <input id="pickFile" class="attach__input" type="file" />
+    </label>
+  </div>
+</div>
 
   <script src="./JavaScript.js" defer></script>
 </body>

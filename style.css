@@ -536,6 +536,7 @@ body.dark .chatTitle{
   padding: 0 14px;
   cursor:pointer;
   backdrop-filter: blur(2px);
+  z-index: 1;
 }
 body.dark #planBtn{
   border: 1px solid rgba(255,255,255,0.18);
@@ -1559,6 +1560,104 @@ body.dark .taskGroupBody{
   line-height:1.1;
 }
 
+/* ===============================
+   Telegram-like attach menu
+================================= */
+
+.attach {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 50;
+}
+
+.attach.is-open {
+  pointer-events: auto;
+}
+
+.attach::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.18);
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+
+.attach.is-open::before {
+  opacity: 1;
+}
+
+/* Панелька меню */
+.attach__panel {
+  position: absolute;
+  /* меню появится около плюсика */
+  left: 16px;
+  bottom: 92px;
+  z-index: 9999999999999;
+  width: 220px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.18);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+
+  overflow: hidden;
+
+  transform: translateY(10px) scale(0.98);
+  opacity: 0;
+  transition: transform 160ms ease, opacity 160ms ease;
+}
+
+.attach.is-open .attach__panel {
+  transform: translateY(0) scale(1);
+  opacity: 1;
+}
+
+/* Пункты */
+.attach__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  padding: 12px 14px;
+  cursor: pointer;
+  user-select: none;
+  z-index: 999999999;
+  color: #0f1a12;
+  font: 14px/1.2 Arial, sans-serif;
+}
+
+.attach__item:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.attach__item:active {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.attach__icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+
+  display: grid;
+  place-items: center;
+
+  background: rgba(53, 166, 211, 0.14);
+  font-size: 16px;
+}
+
+.attach__text {
+  font-weight: 600;
+}
+
+/* Скрываем input, но оставляем кликабельным label */
+.attach__input {
+  display: none;
+}
 
 
 /* =========================================
