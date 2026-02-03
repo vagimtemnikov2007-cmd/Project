@@ -1,4 +1,4 @@
-// LSD Front — FULL (Chats + Tasks + Auto-delete empty chats + Plan -> Tasks)
+// LSD Front — OLD UI + Chats list in tgHistoryScroll (historyList)
 // Drop-in replacement for your current JavaScript.js
 
 window.addEventListener("DOMContentLoaded", () => {
@@ -50,16 +50,6 @@ window.addEventListener("DOMContentLoaded", () => {
     sSet(key, JSON.stringify(obj));
   }
 
-  function escapeHTML(s) {
-    return String(s).replace(/[&<>"']/g, (ch) => ({
-      "&": "&amp;",
-      "<": "&lt;",
-      ">": "&gt;",
-      '"': "&quot;",
-      "'": "&#039;",
-    }[ch]));
-  }
-
   // =========================
   // CONFIG
   // =========================
@@ -72,9 +62,6 @@ window.addEventListener("DOMContentLoaded", () => {
   const STORAGE_ACTIVE_CHAT = "lsd_active_chat_v3";
   const STORAGE_CHATS_INDEX = "lsd_chats_index_v1"; // array of chatIds
   const STORAGE_CHAT_CACHE = "lsd_chat_cache_v3";   // { chatId: { meta, messages } }
-
-  // tasks
-  const STORAGE_TASKS = "lsd_tasks_v1"; // array [{ id, text, done }]
 
   const EMOJIS = ["💬","🧠","⚡","🧩","📌","🎯","🧊","🍀","🌙","☀️","🦊","🐺","🐼","🧪","📚"];
 
@@ -105,22 +92,14 @@ window.addEventListener("DOMContentLoaded", () => {
     return Number.isFinite(n) ? n : null;
   }
 
-async function postJSON(url, payload, timeoutMs = 20000) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-
-  try {
-    dbg("➡️ fetch: " + url);
-
+  async function postJSON(url, payload) {
     const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
-      signal: controller.signal,
     });
 
     const raw = await res.text();
-
     let data = null;
     try {
       data = raw ? JSON.parse(raw) : null;
@@ -128,23 +107,11 @@ async function postJSON(url, payload, timeoutMs = 20000) {
       data = { error: "bad_json_from_server", raw };
     }
 
-    dbg(`⬅️ status=${res.status} ok=${res.ok}`);
     return { ok: res.ok, status: res.status, data };
-  } catch (e) {
-    const msg =
-      e?.name === "AbortError"
-        ? `timeout_${timeoutMs}ms`
-        : String(e?.message || e);
-
-    dbg("❌ fetch error: " + msg);
-    return { ok: false, status: 0, data: { error: msg } };
-  } finally {
-    clearTimeout(timer);
   }
-}
 
   // =========================
-  // ELEMENTS
+  // ELEMENTS (your old UI)
   // =========================
   const settingsBtn = document.querySelector(".settings_bt");
   const drawer = $("settingsDrawer");
@@ -157,9 +124,6 @@ async function postJSON(url, payload, timeoutMs = 20000) {
   const navBtn = $("navBtn");
   const navBtnText = navBtn?.querySelector("span");
 
-  const tasksListEl = $("tasksList");
-  const clearTasksBtn = $("clearTasks");
-
   const promptEl = $("prompt");
   const sendBtn = $("sendBtn");
 
@@ -167,6 +131,10 @@ async function postJSON(url, payload, timeoutMs = 20000) {
   const chatTypingEl = $("chatTyping");
 
   const planBtn = $("planBtn");
+  const planOverlay = $("planOverlay");
+  const planModal = $("planModal");
+  const planContent = $("planContent");
+  const closePlanBtn = $("closePlan");
 
   const userEl = $("user");
 
@@ -180,9 +148,10 @@ async function postJSON(url, payload, timeoutMs = 20000) {
 
   // drawer menu
   const menuProfile = $("menuProfile");
+  const menuHistory = $("menuHistory");
   const menuSettings = $("menuSettings");
 
-  // history list container
+  // history list container (we will render CHATS here)
   const historyList = $("historyList");
   const clearHistoryBtn = $("clearHistory");
 
@@ -197,22 +166,10 @@ async function postJSON(url, payload, timeoutMs = 20000) {
   const profileBio = $("profileBio");
 
   // =========================
-  // STATE
-  // =========================
-  let currentScreen = "home";
-  let isLoading = false;
-
-  // chats
-  let activeChatId = sGet(STORAGE_ACTIVE_CHAT, "");
-  let chatsIndex = sJSONGet(STORAGE_CHATS_INDEX, []);
-  let chatCache = sJSONGet(STORAGE_CHAT_CACHE, {});
-
-  // tasks
-  let tasks = sJSONGet(STORAGE_TASKS, []);
-
-  // =========================
   // UI: SCREEN SWITCH
   // =========================
+  let currentScreen = "home";
+
   function setNavLabel() {
     if (!navBtnText) return;
     navBtnText.textContent = currentScreen === "home" ? "задачи" : "назад";
@@ -223,21 +180,22 @@ async function postJSON(url, payload, timeoutMs = 20000) {
     chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
   }
 
-  function switchScreen(name) {
-    // если уходим с экрана chat — чистим пустые чаты
-    if (currentScreen === "chat" && name !== "chat") {
-      cleanupEmptyChats();
-    }
-
-    [screenHome, screenTasks, screenChat].forEach((s) => s && s.classList.remove("active"));
-    const el = name === "home" ? screenHome : name === "tasks" ? screenTasks : screenChat;
-    el && el.classList.add("active");
-
-    currentScreen = name;
-    setNavLabel();
-    updatePlanVisibility();
-    if (name === "chat") scrollToBottom();
+function switchScreen(name) {
+  // если уходим с экрана chat — чистим пустые чаты
+  if (currentScreen === "chat" && name !== "chat") {
+    cleanupEmptyChats();
   }
+
+  [screenHome, screenTasks, screenChat].forEach((s) => s && s.classList.remove("active"));
+  const el = name === "home" ? screenHome : name === "tasks" ? screenTasks : screenChat;
+  el && el.classList.add("active");
+
+  currentScreen = name;
+  setNavLabel();
+  updatePlanVisibility();
+  if (name === "chat") scrollToBottom();
+}
+
 
   on(navBtn, "click", () => {
     if (currentScreen === "home") switchScreen("tasks");
@@ -289,7 +247,8 @@ async function postJSON(url, payload, timeoutMs = 20000) {
     drawer?.classList.add("open");
     drawerOverlay?.classList.add("open");
     drawer?.setAttribute("aria-hidden", "false");
-    renderChatsInHistory();
+    renderChatsInHistory(); // render chats list every time drawer opens
+
   }
 
   function closeDrawer() {
@@ -302,89 +261,32 @@ async function postJSON(url, payload, timeoutMs = 20000) {
   on(drawerOverlay, "click", closeDrawer);
 
   // =========================
-  // TASKS
+  // CHAT STORAGE (MULTI-CHAT)
   // =========================
-  function saveTasks() {
-    sJSONSet(STORAGE_TASKS, tasks);
-  }
+  let activeChatId = sGet(STORAGE_ACTIVE_CHAT, "");
+  let chatsIndex = sJSONGet(STORAGE_CHATS_INDEX, []);
+  let chatCache = sJSONGet(STORAGE_CHAT_CACHE, {});
 
-  function renderTasks() {
-    if (!tasksListEl) return;
-    tasksListEl.innerHTML = "";
-
-    if (!Array.isArray(tasks) || tasks.length === 0) {
-      const li = document.createElement("li");
-      li.className = "taskItem";
-      li.innerHTML = `<div class="taskText">Пока задач нет 🙂</div>`;
-      tasksListEl.appendChild(li);
-      return;
-    }
-
-    tasks.forEach((t) => {
-      const li = document.createElement("li");
-      li.className = "taskItem" + (t.done ? " done" : "");
-
-      li.innerHTML = `
-        <input type="checkbox" ${t.done ? "checked" : ""} />
-        <div class="taskText">${escapeHTML(t.text)}</div>
-      `;
-
-      const cb = li.querySelector("input[type='checkbox']");
-      cb.addEventListener("change", () => {
-        t.done = !!cb.checked;
-        saveTasks();
-        renderTasks();
-      });
-
-      tasksListEl.appendChild(li);
-    });
-  }
-
-  function setTasksFromCards(cards) {
-    const flat = (cards || []).flatMap((card) => (Array.isArray(card?.tasks) ? card.tasks : []));
-    const next = [];
-
-    flat.forEach((t) => {
-      const txt = String(t?.t || "").trim();
-      if (!txt) return;
-      next.push({ id: uuid(), text: txt, done: false });
-    });
-
-    tasks = next;
-    saveTasks();
-    renderTasks();
-  }
-
-  on(clearTasksBtn, "click", () => {
-    tasks = [];
-    saveTasks();
-    renderTasks();
-  });
-
-  // =========================
-  // CHATS STORAGE (MULTI-CHAT)
-  // =========================
   function ensureChat(id) {
-    if (!id) return;
     if (!chatCache[id]) {
       chatCache[id] = {
         meta: { title: "Новый чат", emoji: pickEmoji(), updatedAt: Date.now() },
         messages: [],
       };
-      return;
+    } else {
+      // migrate old shape
+      if (!chatCache[id].meta) {
+        chatCache[id].meta = { title: "Новый чат", emoji: pickEmoji(), updatedAt: Date.now() };
+      }
+      if (!Array.isArray(chatCache[id].messages) && Array.isArray(chatCache[id].messages?.messages)) {
+        // just in case some weird nesting
+        chatCache[id].messages = chatCache[id].messages.messages;
+      }
+      if (!Array.isArray(chatCache[id].messages)) chatCache[id].messages = [];
+      if (!chatCache[id].meta.updatedAt) chatCache[id].meta.updatedAt = Date.now();
+      if (!chatCache[id].meta.emoji) chatCache[id].meta.emoji = pickEmoji();
+      if (!chatCache[id].meta.title) chatCache[id].meta.title = "Новый чат";
     }
-
-    // migrate
-    if (!chatCache[id].meta) {
-      chatCache[id].meta = { title: "Новый чат", emoji: pickEmoji(), updatedAt: Date.now() };
-    }
-    if (!Array.isArray(chatCache[id].messages) && Array.isArray(chatCache[id].messages?.messages)) {
-      chatCache[id].messages = chatCache[id].messages.messages;
-    }
-    if (!Array.isArray(chatCache[id].messages)) chatCache[id].messages = [];
-    if (!chatCache[id].meta.updatedAt) chatCache[id].meta.updatedAt = Date.now();
-    if (!chatCache[id].meta.emoji) chatCache[id].meta.emoji = pickEmoji();
-    if (!chatCache[id].meta.title) chatCache[id].meta.title = "Новый чат";
   }
 
   function saveChats() {
@@ -392,6 +294,65 @@ async function postJSON(url, payload, timeoutMs = 20000) {
     sJSONSet(STORAGE_CHATS_INDEX, chatsIndex);
     sJSONSet(STORAGE_CHAT_CACHE, chatCache);
   }
+  
+  function cleanupEmptyChats() {
+  // "сидит ли юзер в чате прямо сейчас"
+  const userIsInChatNow = (currentScreen === "chat");
+
+  // удаляем пустые чаты:
+  // - если чат НЕ активный
+  // - ИЛИ он активный, но юзер не на экране chat
+  const toDelete = chatsIndex.filter((id) => {
+    ensureChat(id);
+    const c = chatCache[id];
+    const empty = !c.messages || c.messages.length === 0;
+    const isActive = id === activeChatId;
+
+    return empty && (!isActive || !userIsInChatNow);
+  });
+
+  if (!toDelete.length) return;
+
+  // удаляем из кеша и индекса
+  toDelete.forEach((id) => {
+    delete chatCache[id];
+  });
+  chatsIndex = chatsIndex.filter((id) => !toDelete.includes(id));
+
+  // если удалили активный чат — выбираем новый
+  if (toDelete.includes(activeChatId)) {
+    activeChatId = chatsIndex[0] || "";
+  }
+
+  // если чатов совсем не осталось — создаём новый
+  if (!activeChatId) {
+    const id = uuid();
+    chatCache[id] = {
+      meta: { title: "Новый чат", emoji: pickEmoji(), updatedAt: Date.now() },
+      messages: [],
+    };
+    chatsIndex = [id];
+    activeChatId = id;
+  }
+
+  saveChats();
+  renderChatsInHistory();
+}
+
+function setActiveChat(id) {
+  // если был пустой чат и мы уходим из него — удалим
+  cleanupEmptyChats();
+
+  activeChatId = id;
+  ensureChat(activeChatId);
+  if (!chatsIndex.includes(activeChatId)) chatsIndex.unshift(activeChatId);
+  bumpChatToTop(activeChatId);
+  saveChats();
+
+  renderMessages();
+  renderChatsInHistory();
+}
+
 
   function bumpChatToTop(id) {
     chatsIndex = [id, ...chatsIndex.filter((x) => x !== id)];
@@ -407,62 +368,7 @@ async function postJSON(url, payload, timeoutMs = 20000) {
     return getActiveChat().messages || [];
   }
 
-  function makeChatTitleFromText(text) {
-    const t = String(text || "").trim();
-    if (!t) return "Новый чат";
-    return t.length > 22 ? t.slice(0, 22) + "…" : t;
-  }
-
-  function cleanupEmptyChats() {
-    const userIsInChatNow = (currentScreen === "chat");
-
-    const toDelete = chatsIndex.filter((id) => {
-      ensureChat(id);
-      const c = chatCache[id];
-      const empty = !c.messages || c.messages.length === 0;
-      const isActive = id === activeChatId;
-      return empty && (!isActive || !userIsInChatNow);
-    });
-
-    if (!toDelete.length) return;
-
-    toDelete.forEach((id) => delete chatCache[id]);
-    chatsIndex = chatsIndex.filter((id) => !toDelete.includes(id));
-
-    if (toDelete.includes(activeChatId)) {
-      activeChatId = chatsIndex[0] || "";
-    }
-
-    if (!activeChatId) {
-      const id = uuid();
-      chatCache[id] = {
-        meta: { title: "Новый чат", emoji: pickEmoji(), updatedAt: Date.now() },
-        messages: [],
-      };
-      chatsIndex = [id];
-      activeChatId = id;
-    }
-
-    saveChats();
-    renderChatsInHistory();
-  }
-
-  function setActiveChat(id) {
-    cleanupEmptyChats();
-
-    activeChatId = id;
-    ensureChat(activeChatId);
-    if (!chatsIndex.includes(activeChatId)) chatsIndex.unshift(activeChatId);
-    bumpChatToTop(activeChatId);
-    saveChats();
-
-    renderMessages();
-    renderChatsInHistory();
-  }
-
   function createNewChat() {
-    cleanupEmptyChats();
-
     const id = uuid();
     chatCache[id] = {
       meta: { title: "Новый чат", emoji: pickEmoji(), updatedAt: Date.now() },
@@ -477,9 +383,20 @@ async function postJSON(url, payload, timeoutMs = 20000) {
     chatsIndex = [];
     activeChatId = "";
     saveChats();
+    // create a fresh one
     createNewChat();
   }
 
+  function makeChatTitleFromText(text) {
+    const t = String(text || "").trim();
+    if (!t) return "Новый чат";
+    return t.length > 22 ? t.slice(0, 22) + "…" : t;
+  }
+
+
+
+
+  
   function pushMsg(who, text) {
     if (!activeChatId) createNewChat();
 
@@ -525,14 +442,14 @@ async function postJSON(url, payload, timeoutMs = 20000) {
   }
 
   // =========================
-  // RENDER CHATS (DRAWER HISTORY)
+  // RENDER CHATS INSIDE tgHistoryScroll (#historyList)
   // =========================
   function renderChatsInHistory() {
     if (!historyList) return;
 
     historyList.innerHTML = "";
 
-    // New chat row
+    // 1) "New chat" row (inside history, not on home)
     const newRow = document.createElement("div");
     newRow.className = "tgChatRow";
     newRow.innerHTML = `
@@ -552,7 +469,9 @@ async function postJSON(url, payload, timeoutMs = 20000) {
     });
     historyList.appendChild(newRow);
 
+    // divider line effect using border in rows already
     if (!chatsIndex.length) {
+      // no chats yet
       const empty = document.createElement("div");
       empty.className = "histMsg ai";
       empty.textContent = "История чатов пустая 🙂";
@@ -560,6 +479,7 @@ async function postJSON(url, payload, timeoutMs = 20000) {
       return;
     }
 
+    // 2) actual chat rows
     chatsIndex.forEach((id) => {
       ensureChat(id);
       const c = chatCache[id];
@@ -567,10 +487,9 @@ async function postJSON(url, payload, timeoutMs = 20000) {
 
       const row = document.createElement("div");
       row.className = "tgChatRow";
+      if (id === activeChatId) row.style.background = "rgba(0,0,0,0.03)";
 
-      if (id === activeChatId) {
-        row.style.background = "rgba(0,0,0,0.03)";
-      }
+      const unread = ""; // можно позже сделать счётчик непрочитанных
 
       row.innerHTML = `
         <div class="tgEmojiAvatar">${c.meta.emoji || "💬"}</div>
@@ -580,6 +499,7 @@ async function postJSON(url, payload, timeoutMs = 20000) {
         </div>
         <div class="tgChatRight">
           <div class="tgChatTime">${fmtTime(c.meta.updatedAt || Date.now())}</div>
+          ${unread}
         </div>
       `;
 
@@ -593,62 +513,117 @@ async function postJSON(url, payload, timeoutMs = 20000) {
     });
   }
 
-  // =========================
-  // PLAN -> TASKS (NO MODAL)
-  // =========================
-  async function createPlan() {
-    if (isLoading) return;
+  function escapeHTML(s) {
+    return String(s).replace(/[&<>"']/g, (ch) => ({
+      "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"
+    }[ch]));
+  }
 
+  // =========================
+  // PLAN MODAL
+  // =========================
+  function openPlanModal(contentNodeOrHTML) {
+    if (!planOverlay || !planModal || !planContent) return;
+
+    if (typeof contentNodeOrHTML === "string") {
+      planContent.innerHTML = contentNodeOrHTML;
+    } else {
+      planContent.innerHTML = "";
+      planContent.appendChild(contentNodeOrHTML);
+    }
+
+    planOverlay.classList.add("open");
+    planModal.classList.add("open");
+  }
+
+  function closePlanModal() {
+    planOverlay?.classList.remove("open");
+    planModal?.classList.remove("open");
+  }
+
+  on(closePlanBtn, "click", closePlanModal);
+  on(planOverlay, "click", closePlanModal);
+
+  function renderPlanCards(cards) {
+    const wrap = document.createElement("div");
+    wrap.className = "cardsArea";
+
+    (cards || []).forEach((card, idx) => {
+      const box = document.createElement("div");
+      box.className = "cardBox";
+
+      const title = document.createElement("h3");
+      title.className = "cardTitle";
+      title.textContent = card?.title ? String(card.title) : `План #${idx + 1}`;
+
+      const ul = document.createElement("ul");
+      ul.className = "cardTasks";
+
+      const tasks = Array.isArray(card?.tasks) ? card.tasks : [];
+      tasks.forEach((t) => {
+        const txt = String(t?.t || "").trim();
+        if (!txt) return;
+
+        const li = document.createElement("li");
+        li.className = "cardTask";
+
+        const left = document.createElement("div");
+        left.textContent = txt;
+
+        const right = document.createElement("div");
+        right.className = "taskMeta";
+
+        const meta = [];
+        if (Number.isFinite(Number(t?.min))) meta.push(`${Number(t.min)}м`);
+        if (t?.energy) meta.push(String(t.energy));
+        right.textContent = meta.join(" • ");
+
+        li.appendChild(left);
+        li.appendChild(right);
+        ul.appendChild(li);
+      });
+
+      box.appendChild(title);
+      box.appendChild(ul);
+      wrap.appendChild(box);
+    });
+
+    return wrap;
+  }
+
+  // =========================
+  // INIT USER IN DB (on app open)
+  // =========================
+  async function initUserInDB() {
     const tg_id = getTgIdOrNull();
+    dbg("initUserInDB: tg_id=" + tg_id);
+
     if (!tg_id) {
-      dbg("❌ Открой внутри Telegram (нет tg_id)");
+      dbg("❌ Нет tg_id. Открыто НЕ внутри Telegram или нет user в initDataUnsafe.");
       return;
     }
-
-    if (messages().length < 2) {
-      dbg("🙂 Мало переписки для плана");
-      return;
-    }
-
-    isLoading = true;
-    if (planBtn) planBtn.disabled = true;
 
     try {
-      dbg("Создаю план…");
-
       const profile = loadProfile();
-      const { ok, status, data } = await postJSON(`${API_BASE}/api/plan/create`, {
+      dbg("➡️ Отправляю /api/user/init ...");
+
+      const { ok, status, data } = await postJSON(`${API_BASE}/api/user/init`, {
         tg_id,
-        chat_id: activeChatId,
         profile,
       });
 
-      if (!ok) {
-        dbg("❌ Ошибка плана: " + (data?.error || `status_${status}`));
-        return;
-      }
-
-      const cards = Array.isArray(data?.cards) ? data.cards : [];
-      if (!cards.length) {
-        dbg("🙂 План пустой (AI вернул 0 карточек)");
-        return;
-      }
-
-      setTasksFromCards(cards);
-      dbg("✅ План добавлен в задачи");
-      switchScreen("tasks");
+      dbg(`⬅️ Ответ: ok=${ok} status=${status}`);
+      if (!ok) dbg("init error: " + (data?.error || "unknown"));
     } catch (e) {
-      console.log("PLAN ERROR:", e);
-      dbg("❌ Не удалось подключиться к серверу");
-    } finally {
-      isLoading = false;
-      if (planBtn) planBtn.disabled = false;
+      dbg("❌ Ошибка initUserInDB: " + String(e?.message || e));
     }
   }
 
   // =========================
   // SEND MESSAGE (ACTIVE CHAT)
   // =========================
+  let isLoading = false;
+
   async function sendMessage() {
     if (isLoading) return;
 
@@ -668,8 +643,6 @@ async function postJSON(url, payload, timeoutMs = 20000) {
     isLoading = true;
     if (sendBtn) sendBtn.disabled = true;
     if (chatTypingEl) chatTypingEl.hidden = false;
-    dbg("🧠 AI печатает… (жду ответ)");
-
 
     try {
       const profile = loadProfile();
@@ -698,30 +671,53 @@ async function postJSON(url, payload, timeoutMs = 20000) {
   }
 
   // =========================
-  // INIT USER IN DB (on app open)
+  // CREATE PLAN
   // =========================
-  async function initUserInDB() {
-    const tg_id = getTgIdOrNull();
-    dbg("initUserInDB: tg_id=" + tg_id);
+  async function createPlan() {
+    if (isLoading) return;
 
+    const tg_id = getTgIdOrNull();
     if (!tg_id) {
-      dbg("❌ Нет tg_id. Открыто НЕ внутри Telegram или нет user в initDataUnsafe.");
+      openPlanModal("<div class='historyItem'>Открой внутри Telegram (нет tg_id)</div>");
       return;
     }
 
-    try {
-      const profile = loadProfile();
-      dbg("➡️ /api/user/init ...");
+    if (messages().length < 2) {
+      openPlanModal("<div class='historyItem'>Мало переписки для плана 🙂</div>");
+      return;
+    }
 
-      const { ok, status, data } = await postJSON(`${API_BASE}/api/user/init`, {
+    isLoading = true;
+    if (planBtn) planBtn.disabled = true;
+
+    try {
+      openPlanModal("<div class='historyItem'>Создаю план…</div>");
+
+      const profile = loadProfile();
+      const { ok, status, data } = await postJSON(`${API_BASE}/api/plan/create`, {
         tg_id,
+        chat_id: activeChatId,
         profile,
       });
 
-      dbg(`⬅️ init ok=${ok} status=${status}`);
-      if (!ok) dbg("init error: " + (data?.error || "unknown"));
+      if (!ok) {
+        openPlanModal("<div class='historyItem'>Ошибка: " + (data?.error || `status_${status}`) + "</div>");
+        return;
+      }
+
+      const cards = Array.isArray(data?.cards) ? data.cards : [];
+      if (!cards.length) {
+        openPlanModal("<div class='historyItem'>План пустой. Напиши больше деталей 🙂</div>");
+        return;
+      }
+
+      openPlanModal(renderPlanCards(cards));
     } catch (e) {
-      dbg("❌ Ошибка initUserInDB: " + String(e?.message || e));
+      console.log("PLAN ERROR:", e);
+      openPlanModal("<div class='historyItem'>Не удалось подключиться к серверу.</div>");
+    } finally {
+      isLoading = false;
+      if (planBtn) planBtn.disabled = false;
     }
   }
 
@@ -736,8 +732,10 @@ async function postJSON(url, payload, timeoutMs = 20000) {
     if (drawerPhone) drawerPhone.textContent = u?.id ? `ID: ${u.id}` : "ID: —";
     if (drawerAvatar && u?.photo_url) drawerAvatar.src = u.photo_url;
 
+    // profile modal name field (readonly)
     if (profileName) profileName.value = u?.first_name ? u.first_name : "User";
 
+    // fill saved profile fields
     const p = loadProfile();
     if (profileAge) profileAge.value = p.age ?? "";
     if (profileNick) profileNick.value = p.nick ?? "";
@@ -747,23 +745,30 @@ async function postJSON(url, payload, timeoutMs = 20000) {
   }
 
   // =========================
-  // MENU + PROFILE SAVE
+  // MENU BUTTONS
   // =========================
   on(menuProfile, "click", () => {
     closeDrawer();
     openProfile();
   });
 
-  on(menuSettings, "click", () => {
-    // пока пусто
+  on(menuHistory, "click", () => {
+    // просто скролл к списку чатов
+    historyList?.scrollTo({ top: 0, behavior: "smooth" });
   });
 
+  on(menuSettings, "click", () => {
+    // пока пусто — можешь потом добавить
+  });
+
+  // clear chats history
   on(clearHistoryBtn, "click", () => {
     resetAllChats();
     renderChatsInHistory();
   });
 
-  function saveProfileAndClose() {
+  // save profile on close (чтобы не добавлять кнопки)
+  on(closeProfileBtn, "click", () => {
     const p = {
       age: profileAge?.value ?? "",
       nick: profileNick?.value ?? "",
@@ -772,16 +777,23 @@ async function postJSON(url, payload, timeoutMs = 20000) {
     saveProfile(p);
     closeProfile();
     initUserInDB();
-  }
+  });
 
-  on(closeProfileBtn, "click", saveProfileAndClose);
-  on(profileOverlay, "click", saveProfileAndClose);
+  on(profileOverlay, "click", () => {
+    const p = {
+      age: profileAge?.value ?? "",
+      nick: profileNick?.value ?? "",
+      bio: profileBio?.value ?? "",
+    };
+    saveProfile(p);
+    closeProfile();
+    initUserInDB();
+  });
 
   // =========================
   // BINDINGS
   // =========================
   on(sendBtn, "click", sendMessage);
-
   on(promptEl, "keydown", (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -811,6 +823,7 @@ async function postJSON(url, payload, timeoutMs = 20000) {
   // BOOT: ensure at least 1 chat exists
   // =========================
   if (!activeChatId) {
+    // if we have chatsIndex, take first
     if (Array.isArray(chatsIndex) && chatsIndex.length) {
       activeChatId = chatsIndex[0];
     } else {
@@ -819,22 +832,14 @@ async function postJSON(url, payload, timeoutMs = 20000) {
     }
   }
   ensureChat(activeChatId);
-
-  if (!Array.isArray(chatsIndex)) chatsIndex = [activeChatId];
-  if (!chatsIndex.includes(activeChatId)) chatsIndex.unshift(activeChatId);
-
   saveChats();
 
   // init UI
   initDrawerUser();
-  renderTasks();
+  switchScreen("home");
   renderMessages();
   renderChatsInHistory();
-
-  // чистим пустые, но НЕ трогаем активный если юзер не в чате (мы сейчас на home)
   cleanupEmptyChats();
-
-  switchScreen("home");
 
   console.log("[LSD] loaded. activeChatId =", activeChatId);
 });
