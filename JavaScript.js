@@ -1,4 +1,4 @@
-// LSD Front — FULL (Chats + Plan Accept/Decline + Grouped Tasks + Points + Sync Push/Pull)
+// LSD Front — FULL (Chats + Plan Accept/Decline + Grouped Tasks + Points + Sync Push/Pull + Attachments + Subscription + Purchase)
 // Drop-in replacement for your current JavaScript.js
 
 window.addEventListener("DOMContentLoaded", () => {
@@ -6,15 +6,17 @@ window.addEventListener("DOMContentLoaded", () => {
   // HELPERS
   // =========================
   const $ = (id) => document.getElementById(id);
-  const on = (el, ev, fn) => el && el.addEventListener(ev, fn);
+  const on = (el, ev, fn, opt) => el && el.addEventListener(ev, fn, opt);
 
   const debugLine = $("debugLine");
   const dbg = (msg) => {
-    if (debugLine) debugLine.textContent = String(msg);
+    try {
+      if (debugLine) debugLine.textContent = String(msg);
+    } catch {}
   };
 
   const escapeHTML = (s) =>
-    String(s).replace(/[&<>"']/g, (ch) => ({
+    String(s ?? "").replace(/[&<>"']/g, (ch) => ({
       "&": "&amp;",
       "<": "&lt;",
       ">": "&gt;",
@@ -34,10 +36,37 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 
   function fmtTime(ts) {
-    const d = new Date(ts);
+    const d = new Date(ts || Date.now());
     const hh = String(d.getHours()).padStart(2, "0");
     const mm = String(d.getMinutes()).padStart(2, "0");
     return `${hh}:${mm}`;
+  }
+
+  function nowISO(ts) {
+    return new Date(ts || Date.now()).toISOString();
+  }
+
+  // =========================
+  // TELEGRAM
+  // =========================
+  const tg = window.Telegram?.WebApp;
+  try {
+    tg?.ready();
+    tg?.expand();
+  } catch {}
+
+  function getTgIdOrNull() {
+    const id = tg?.initDataUnsafe?.user?.id;
+    const n = Number(id);
+    return Number.isFinite(n) ? n : null;
+  }
+
+  function tgPopup(message, title = "LSD") {
+    try {
+      tg?.showPopup?.({ title, message: String(message), buttons: [{ type: "ok" }] });
+      return;
+    } catch {}
+    alert(String(message));
   }
 
   // =========================
@@ -82,9 +111,10 @@ window.addEventListener("DOMContentLoaded", () => {
   // =========================
   const API_BASE = "https://lsd-server-ml3z.onrender.com";
 
+  // profile
   const STORAGE_PROFILE = "lsd_profile_v2";
 
-  // points
+  // points (VISUAL ONLY, NOT CURRENCY)
   const STORAGE_POINTS = "lsd_points_v1";
 
   // chats
@@ -95,41 +125,125 @@ window.addEventListener("DOMContentLoaded", () => {
   // grouped tasks
   const STORAGE_TASKS_GROUPS = "lsd_tasks_groups_v2"; // { groups: [...] }
 
+  // subscription selection UI (optional persist)
+  const STORAGE_SUB_PLAN = "lsd_sub_plan_v1"; // "month" | "year"
+
+  // =========================
+  // UI ELEMENTS
+  // =========================
+  // drawer
+  const settingsBtn = document.querySelector(".settings_bt");
+  const drawer = $("settingsDrawer");
+  const drawerOverlay = $("drawerOverlay");
+
+  // screens
+  const screenHome = $("screen-home");
+  const screenTasks = $("screen-tasks");
+  const screenChat = $("screen-chat");
+  const screenSubscription = $("screen-subscription");
+
+  // nav
+  const navBtn = $("navBtn");
+  const navBtnText = navBtn?.querySelector("span");
+
+  // chat
+  const promptEl = $("prompt");
+  const sendBtn = $("sendBtn");
+  const chatMessagesEl = $("chatMessages");
+  const chatTypingEl = $("chatTyping");
+  const planBtn = $("planBtn");
+
+  // header user greeting
+  const userEl = $("user");
+
+  // drawer top user
+  const drawerName = $("drawerName");
+  const drawerPhone = $("drawerPhone");
+  const drawerAvatar = $("drawerAvatar");
+
+  // theme mini
+  const themeMiniBtn = $("themeMiniBtn");
+
+  // drawer menu
+  const menuProfile = $("menuProfile");
+  const menuHistory = $("menuHistory");
+  const menuSettings = $("menuSettings");
+
+  // history
+  const historyList = $("historyList");
+  const clearHistoryBtn = $("clearHistory");
+
+  // profile modal
+  const profileModal = $("profileModal");
+  const profileOverlay = $("profileOverlay");
+  const closeProfileBtn = $("closeProfile");
+
+  const profileName = $("profileName");
+  const profileAge = $("profileAge");
+  const profileNick = $("profileNick");
+  const profileBio = $("profileBio");
+
+  // plan modal
+  const planOverlay = $("planOverlay");
+  const planModal = $("planModal");
+  const planContent = $("planContent");
+  const closePlanBtn = $("closePlan");
+
+  // tasks
+  const tasksListEl = $("tasksList");
+  const clearTasksBtn = $("clearTasks");
+
+  // points bar
+  const pointsBar = $("pointsBar");
+  const pointsValue = $("pointsValue");
+
+  // attach
+  const plusBtn = $("plusBtn");
+  const attach = $("attach");
+  const attachPanel = attach?.querySelector(".attach__panel");
+  const pickPhoto = $("pickPhoto");
+  const pickFile = $("pickFile");
+
+  // subscription / upgrade UI
+  const upgradeBtn = document.querySelector(".pass button"); // open sub screen
+  const subClose = $("subscriptionClose");
+  const lsdSubscribeBtn = $("lsdSubscribeBtn");
+  const ctaPrice = $("lsdCtaPrice");
+
+  // =========================
+  // STATE
+  // =========================
+  let currentScreen = "home";
+  let isLoading = false;
+
+  // points (visual progress only)
+  let points = Number(sGet(STORAGE_POINTS, "0")) || 0;
+
+  // chats
+  let activeChatId = sGet(STORAGE_ACTIVE_CHAT, "");
+  let chatsIndex = sJSONGet(STORAGE_CHATS_INDEX, []);
+  let chatCache = sJSONGet(STORAGE_CHAT_CACHE, {});
+
+  // tasks
+  let tasksState = sJSONGet(STORAGE_TASKS_GROUPS, { groups: [] });
+
+  // sync
+  let syncTimer = null;
+  let pullTimer = null;
+
+  // subscription selection
+  let selectedPlan = sGet(STORAGE_SUB_PLAN, "month") || "month"; // "month" | "year"
+
+  // =========================
+  // EMOJI
+  // =========================
   const EMOJIS = ["💬", "🧠", "⚡", "🧩", "📌", "🎯", "🧊", "🍀", "🌙", "☀️", "🦊", "🐺", "🐼", "🧪", "📚"];
   function pickEmoji() {
     return EMOJIS[(Math.random() * EMOJIS.length) | 0];
   }
 
-  function getTgIdOrNull() {
-    const tg = window.Telegram?.WebApp;
-    const id = tg?.initDataUnsafe?.user?.id;
-    const n = Number(id);
-    return Number.isFinite(n) ? n : null;
-  }
-
   // =========================
-  // POINTS UI
-  // =========================
-  let points = Number(sGet(STORAGE_POINTS, "0")) || 0;
-
-  function renderPointsBar() {
-    const val = $("pointsValue"); // optional
-    if (val) val.textContent = String(points || 0);
-
-    const bar = $("pointsBar"); // optional
-    if (bar) {
-      bar.classList.toggle("open", points > 0);
-      bar.setAttribute("aria-hidden", points > 0 ? "false" : "true");
-    }
-  }
-
-  function savePoints() {
-    sSet(STORAGE_POINTS, String(points));
-    renderPointsBar();
-  }
-
-  // =========================
-  // NETWORK (with timeout)
+  // NETWORK (timeout + safe json)
   // =========================
   async function postJSON(url, payload, timeoutMs = 20000) {
     const controller = new AbortController();
@@ -141,7 +255,7 @@ window.addEventListener("DOMContentLoaded", () => {
       const res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(payload ?? {}),
         signal: controller.signal,
       });
 
@@ -199,261 +313,7 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 
   // =========================
-  // ELEMENTS
-  // =========================
-  const settingsBtn = document.querySelector(".settings_bt");
-  const drawer = $("settingsDrawer");
-  const drawerOverlay = $("drawerOverlay");
-
-  const screenHome = $("screen-home");
-  const screenTasks = $("screen-tasks");
-  const screenChat = $("screen-chat");
-
-  const navBtn = $("navBtn");
-  const navBtnText = navBtn?.querySelector("span");
-
-  const promptEl = $("prompt");
-  const sendBtn = $("sendBtn");
-
-  const chatMessagesEl = $("chatMessages");
-  const chatTypingEl = $("chatTyping");
-
-  const planBtn = $("planBtn");
-  const userEl = $("user");
-
-  // drawer top user
-  const drawerName = $("drawerName");
-  const drawerPhone = $("drawerPhone");
-  const drawerAvatar = $("drawerAvatar");
-
-  // theme mini btn
-  const themeMiniBtn = $("themeMiniBtn");
-
-  // drawer menu
-  const menuProfile = $("menuProfile");
-  const menuHistory = $("menuHistory");
-  const menuSettings = $("menuSettings");
-
-  // history list
-  const historyList = $("historyList");
-  const clearHistoryBtn = $("clearHistory");
-
-  // profile modal
-  const profileModal = $("profileModal");
-  const profileOverlay = $("profileOverlay");
-  const closeProfileBtn = $("closeProfile");
-
-  const profileName = $("profileName");
-  const profileAge = $("profileAge");
-  const profileNick = $("profileNick");
-  const profileBio = $("profileBio");
-
-  // plan modal
-  const planOverlay = $("planOverlay");
-  const planModal = $("planModal");
-  const planContent = $("planContent");
-  const closePlanBtn = $("closePlan");
-
-  // tasks UI
-  const tasksListEl = $("tasksList");
-  const clearTasksBtn = $("clearTasks");
-
-  // =========================
-  // STATE
-  // =========================
-  let currentScreen = "home";
-  let isLoading = false;
-
-  // chats
-  let activeChatId = sGet(STORAGE_ACTIVE_CHAT, "");
-  let chatsIndex = sJSONGet(STORAGE_CHATS_INDEX, []);
-  let chatCache = sJSONGet(STORAGE_CHAT_CACHE, {});
-
-  // grouped tasks
-  let tasksState = sJSONGet(STORAGE_TASKS_GROUPS, { groups: [] });
-
-  // =========================
-  // SYNC (push / pull)
-  // =========================
-  let syncTimer = null;
-
-  function scheduleSyncPush() {
-    clearTimeout(syncTimer);
-    syncTimer = setTimeout(syncPush, 700);
-  }
-
-  function roleToWho(role) {
-    return role === "assistant" ? "ai" : "user";
-  }
-  function whoToRole(who) {
-    return who === "ai" ? "assistant" : "user";
-  }
-
-  async function syncPush() {
-    const tg_id = getTgIdOrNull();
-    if (!tg_id) return;
-
-    const chats_upsert = (chatsIndex || [])
-      .filter((id) => chatCache[id])
-      .map((id) => {
-        const c = chatCache[id];
-        return {
-          chat_id: id,
-          title: c?.meta?.title || "Новый чат",
-          emoji: c?.meta?.emoji || "💬",
-          updated_at: new Date(c?.meta?.updatedAt || Date.now()).toISOString(),
-        };
-      });
-
-    const messages_upsert = [];
-    (chatsIndex || []).forEach((chat_id) => {
-      const arr = (chatCache[chat_id]?.messages || []).slice(-80);
-      arr.forEach((m) => {
-        if (!m.msg_id) m.msg_id = uuid();
-        messages_upsert.push({
-          chat_id,
-          msg_id: m.msg_id,
-          role: whoToRole(m.who),
-          content: m.text,
-          created_at: new Date(m.ts || Date.now()).toISOString(),
-        });
-      });
-    });
-
-    await postJSON(`${API_BASE}/api/sync/push`, {
-      tg_id,
-      chats_upsert,
-      messages_upsert,
-      tasks_state: tasksState,
-      points,
-    });
-  }
-
-  async function syncPull() {
-    const tg_id = getTgIdOrNull();
-    if (!tg_id) return;
-
-    const { ok, data } = await postJSON(`${API_BASE}/api/sync/pull`, { tg_id });
-    if (!ok) return;
-
-    // chats
-    if (Array.isArray(data?.chats)) {
-      data.chats.forEach((c) => {
-        const id = c.chat_id;
-        if (!id) return;
-
-        if (!chatCache[id]) chatCache[id] = { meta: {}, messages: [] };
-        chatCache[id].meta = {
-          title: c.title || "Новый чат",
-          emoji: c.emoji || "💬",
-          updatedAt: new Date(c.updated_at || Date.now()).getTime(),
-        };
-
-        if (!chatsIndex.includes(id)) chatsIndex.push(id);
-        ensureChat(id);
-      });
-    }
-
-    // messages
-    if (Array.isArray(data?.messages)) {
-      const byChat = new Map();
-
-      data.messages.forEach((m) => {
-        const chat_id = m.chat_id;
-        if (!chat_id) return;
-
-        if (!byChat.has(chat_id)) byChat.set(chat_id, []);
-        byChat.get(chat_id).push({
-          msg_id: m.msg_id,
-          who: roleToWho(m.role),
-          text: m.content,
-          ts: new Date(m.created_at || Date.now()).getTime(),
-        });
-      });
-
-      byChat.forEach((arr, chat_id) => {
-        ensureChat(chat_id);
-
-        const existing = new Set((chatCache[chat_id].messages || []).map((x) => x.msg_id).filter(Boolean));
-
-        arr.forEach((x) => {
-          if (!x.msg_id) x.msg_id = uuid();
-          if (!existing.has(x.msg_id)) chatCache[chat_id].messages.push(x);
-        });
-
-        chatCache[chat_id].messages.sort((a, b) => (a.ts || 0) - (b.ts || 0));
-
-        const last = chatCache[chat_id].messages[chatCache[chat_id].messages.length - 1];
-        if (last?.ts) chatCache[chat_id].meta.updatedAt = last.ts;
-      });
-    }
-
-    // tasks_state
-    if (data?.tasks_state && typeof data.tasks_state === "object") {
-      tasksState = data.tasks_state;
-      saveTasksState();
-    }
-
-    // points
-    if (Number.isFinite(Number(data?.points))) {
-      points = Number(data.points);
-      savePoints();
-    }
-
-    // order chats by freshness
-    chatsIndex = chatsIndex
-      .filter((id) => chatCache[id])
-      .sort((a, b) => (chatCache[b].meta.updatedAt || 0) - (chatCache[a].meta.updatedAt || 0));
-
-    if (!activeChatId || !chatCache[activeChatId]) {
-      activeChatId = chatsIndex[0] || activeChatId;
-    }
-
-    saveChats();
-    renderTasks();
-    renderChatsInHistory();
-    renderMessages();
-  }
-
-  // =========================
-  // UI: SCREEN SWITCH
-  // =========================
-  function setNavLabel() {
-    if (!navBtnText) return;
-    navBtnText.textContent = currentScreen === "home" ? "задачи" : "назад";
-  }
-
-  function scrollToBottom() {
-    if (!chatMessagesEl) return;
-    chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
-  }
-
-  function updatePlanVisibility() {
-    if (!planBtn) return;
-    const enough = getMessages().length >= 2;
-    planBtn.hidden = !(currentScreen === "chat" && enough);
-  }
-
-  function switchScreen(name) {
-    if (currentScreen === "chat" && name !== "chat") cleanupEmptyChats();
-
-    [screenHome, screenTasks, screenChat].forEach((s) => s && s.classList.remove("active"));
-    const el = name === "home" ? screenHome : name === "tasks" ? screenTasks : screenChat;
-    el && el.classList.add("active");
-
-    currentScreen = name;
-    setNavLabel();
-    updatePlanVisibility();
-    if (name === "chat") scrollToBottom();
-  }
-
-  on(navBtn, "click", () => {
-    if (currentScreen === "home") switchScreen("tasks");
-    else switchScreen("home");
-  });
-
-  // =========================
-  // PROFILE
+  // PROFILE (local + init in DB)
   // =========================
   function loadProfile() {
     return sJSONGet(STORAGE_PROFILE, { age: "", nick: "", bio: "" });
@@ -463,57 +323,48 @@ window.addEventListener("DOMContentLoaded", () => {
     sJSONSet(STORAGE_PROFILE, p);
   }
 
-  function openProfile() {
-    if (!profileModal || !profileOverlay) return;
-    profileModal.classList.add("open");
-    profileOverlay.classList.add("open");
-    profileModal.setAttribute("aria-hidden", "false");
-  }
+  async function initUserInDB() {
+    const tg_id = getTgIdOrNull();
+    dbg("initUserInDB: tg_id=" + tg_id);
 
-  function closeProfile() {
-    if (!profileModal || !profileOverlay) return;
-    profileModal.classList.remove("open");
-    profileOverlay.classList.remove("open");
-    profileModal.setAttribute("aria-hidden", "true");
+    if (!tg_id) {
+      dbg("❌ Нет tg_id. Открыто НЕ внутри Telegram или нет user в initDataUnsafe.");
+      return;
+    }
+
+    try {
+      const profile = loadProfile();
+      dbg("➡️ /api/user/init ...");
+      const { ok, status, data } = await postJSON(`${API_BASE}/api/user/init`, { tg_id, profile });
+      dbg(`⬅️ init ok=${ok} status=${status}`);
+      if (!ok) dbg("init error: " + (data?.error || "unknown"));
+    } catch (e) {
+      dbg("❌ Ошибка initUserInDB: " + String(e?.message || e));
+    }
   }
 
   // =========================
-  // THEME (FIXED)
+  // THEME
   // =========================
-function syncThemeIcon() {
-  if (!themeMiniBtn) return;
+  function syncThemeIcon() {
+    if (!themeMiniBtn) return;
+    const isDark = document.body.classList.contains("dark");
 
-  const isDark = document.body.classList.contains("dark");
+    const OFFSET_X = 0;
+    const OFFSET_Y = 1;
 
-  // оффсеты — МОЖЕШЬ КРУТИТЬ
-  const OFFSET_X = 0; // px (влево - / вправо +)
-  const OFFSET_Y = 1; // px (вверх - / вниз +)
-
-  themeMiniBtn.innerHTML = `
-    <span
-      style="
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        width: 24px;
-        height: 24px;
-      "
-    >
-      <img
-        src="${isDark ? "img/icons8-sun-48.svg" : "img/moon-20.svg"}"
-        alt="theme"
-        width="22"
-        height="22"
-        style="
-          transform: translate(${OFFSET_X}px, ${OFFSET_Y}px);
-          ${isDark ? "filter: invert(1);" : ""}
-        "
-      />
-    </span>
-  `;
-}
-
-
+    themeMiniBtn.innerHTML = `
+      <span style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;">
+        <img
+          src="${isDark ? "img/icons8-sun-48.svg" : "img/moon-20.svg"}"
+          alt="theme"
+          width="22"
+          height="22"
+          style="transform: translate(${OFFSET_X}px, ${OFFSET_Y}px); ${isDark ? "filter: invert(1);" : ""}"
+        />
+      </span>
+    `;
+  }
 
   on(themeMiniBtn, "click", () => {
     document.body.classList.toggle("dark");
@@ -540,10 +391,82 @@ function syncThemeIcon() {
   on(drawerOverlay, "click", closeDrawer);
 
   // =========================
+  // SCREEN SWITCH + POINTS VISIBILITY
+  // =========================
+  function setNavLabel() {
+    if (!navBtnText) return;
+    // home <-> tasks toggle как раньше
+    navBtnText.textContent = currentScreen === "home" ? "задачи" : "назад";
+  }
+
+  function scrollToBottom() {
+    if (!chatMessagesEl) return;
+    chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+  }
+
+  function updatePlanVisibility() {
+    if (!planBtn) return;
+    const enough = getMessages().length >= 2;
+    planBtn.hidden = !(currentScreen === "chat" && enough);
+  }
+
+  function updatePointsVisibility() {
+    // pointsBar должен быть виден ТОЛЬКО на экране задач
+    if (!pointsBar) return;
+    pointsBar.style.display = currentScreen === "tasks" ? "" : "none";
+  }
+
+  function switchScreen(name) {
+    if (currentScreen === "chat" && name !== "chat") cleanupEmptyChats();
+
+    [screenHome, screenTasks, screenChat, screenSubscription].forEach((s) => s && s.classList.remove("active"));
+
+    const el =
+      name === "home"
+        ? screenHome
+        : name === "tasks"
+        ? screenTasks
+        : name === "subscription"
+        ? screenSubscription
+        : screenChat;
+
+    el && el.classList.add("active");
+
+    currentScreen = name;
+    setNavLabel();
+    updatePlanVisibility();
+    updatePointsVisibility();
+    if (name === "chat") scrollToBottom();
+  }
+
+  on(navBtn, "click", () => {
+    if (currentScreen === "home") switchScreen("tasks");
+    else switchScreen("home");
+  });
+
+  // =========================
+  // POINTS (VISUAL PROGRESS)
+  // =========================
+  function renderPointsBar() {
+    if (pointsValue) pointsValue.textContent = String(points || 0);
+    if (pointsBar) {
+      pointsBar.classList.toggle("open", points > 0);
+      pointsBar.setAttribute("aria-hidden", points > 0 ? "false" : "true");
+    }
+    updatePointsVisibility();
+  }
+
+  function savePoints() {
+    sSet(STORAGE_POINTS, String(points));
+    renderPointsBar();
+  }
+
+  // =========================
   // CHATS STORAGE
   // =========================
   function ensureChat(id) {
     if (!id) return;
+
     if (!chatCache[id]) {
       chatCache[id] = {
         meta: { title: "Новый чат", emoji: pickEmoji(), updatedAt: Date.now() },
@@ -555,10 +478,13 @@ function syncThemeIcon() {
     if (!chatCache[id].meta) {
       chatCache[id].meta = { title: "Новый чат", emoji: pickEmoji(), updatedAt: Date.now() };
     }
+
+    // fixes older shape
     if (!Array.isArray(chatCache[id].messages) && Array.isArray(chatCache[id].messages?.messages)) {
       chatCache[id].messages = chatCache[id].messages.messages;
     }
     if (!Array.isArray(chatCache[id].messages)) chatCache[id].messages = [];
+
     if (!chatCache[id].meta.updatedAt) chatCache[id].meta.updatedAt = Date.now();
     if (!chatCache[id].meta.emoji) chatCache[id].meta.emoji = pickEmoji();
     if (!chatCache[id].meta.title) chatCache[id].meta.title = "Новый чат";
@@ -606,16 +532,11 @@ function syncThemeIcon() {
     toDelete.forEach((id) => delete chatCache[id]);
     chatsIndex = chatsIndex.filter((id) => !toDelete.includes(id));
 
-    if (toDelete.includes(activeChatId)) {
-      activeChatId = chatsIndex[0] || "";
-    }
+    if (toDelete.includes(activeChatId)) activeChatId = chatsIndex[0] || "";
 
     if (!activeChatId) {
       const id = uuid();
-      chatCache[id] = {
-        meta: { title: "Новый чат", emoji: pickEmoji(), updatedAt: Date.now() },
-        messages: [],
-      };
+      chatCache[id] = { meta: { title: "Новый чат", emoji: pickEmoji(), updatedAt: Date.now() }, messages: [] };
       chatsIndex = [id];
       activeChatId = id;
     }
@@ -641,10 +562,7 @@ function syncThemeIcon() {
     cleanupEmptyChats();
 
     const id = uuid();
-    chatCache[id] = {
-      meta: { title: "Новый чат", emoji: pickEmoji(), updatedAt: Date.now() },
-      messages: [],
-    };
+    chatCache[id] = { meta: { title: "Новый чат", emoji: pickEmoji(), updatedAt: Date.now() }, messages: [] };
     chatsIndex = [id, ...chatsIndex.filter((x) => x !== id)];
     setActiveChat(id);
   }
@@ -669,8 +587,8 @@ function syncThemeIcon() {
     };
 
     c.messages.push(msg);
-
     c.meta.updatedAt = Date.now();
+
     if (c.meta.title === "Новый чат" && who === "user") {
       c.meta.title = makeChatTitleFromText(text);
     }
@@ -711,6 +629,7 @@ function syncThemeIcon() {
 
     historyList.innerHTML = "";
 
+    // new chat row
     const newRow = document.createElement("div");
     newRow.className = "tgChatRow";
     newRow.innerHTML = `
@@ -806,6 +725,7 @@ function syncThemeIcon() {
     return { totalMin, avgLevel, doneCount, allDone, itemsCount: items.length };
   }
 
+  // points for group: items + floor(totalMin/30)
   function calcGroupPoints(g) {
     const meta = groupMeta(g);
     const p1 = meta.itemsCount;
@@ -864,6 +784,7 @@ function syncThemeIcon() {
         renderTasks();
       });
 
+      // submit bar
       if (submitted) {
         const okBar = document.createElement("div");
         okBar.className = "taskSubmitBar done";
@@ -879,6 +800,8 @@ function syncThemeIcon() {
           if (g.submitted) return;
 
           g.submitted = true;
+
+          // VISUAL POINTS ONLY
           points += groupPoints;
           savePoints();
 
@@ -916,7 +839,7 @@ function syncThemeIcon() {
           const cb = row.querySelector("input[type='checkbox']");
           cb.addEventListener("change", () => {
             t.done = !!cb.checked;
-            if (!t.done) g.submitted = false;
+            if (!t.done) g.submitted = false; // если снял галку — пересдать потом
 
             saveTasksState();
             renderTasks();
@@ -967,30 +890,32 @@ function syncThemeIcon() {
 
   function normalizeCards(cards) {
     const arr = Array.isArray(cards) ? cards : [];
-    return arr.map((c, idx) => {
-      const title = String(c?.title || `План #${idx + 1}`).trim();
-      const tasks = Array.isArray(c?.tasks) ? c.tasks : [];
+    return arr
+      .map((c, idx) => {
+        const title = String(c?.title || `План #${idx + 1}`).trim();
+        const tasks = Array.isArray(c?.tasks) ? c.tasks : [];
 
-      const items = tasks
-        .map((t) => {
-          const text = String(t?.t || "").trim();
-          if (!text) return null;
+        const items = tasks
+          .map((t) => {
+            const text = String(t?.t || "").trim();
+            if (!text) return null;
 
-          const min = Number.isFinite(Number(t?.min)) ? Number(t.min) : null;
-          const level = energyToLevel(t?.energy);
+            const min = Number.isFinite(Number(t?.min)) ? Number(t.min) : null;
+            const level = energyToLevel(t?.energy);
 
-          return {
-            id: uuid(),
-            text,
-            min,
-            level,
-            done: false,
-          };
-        })
-        .filter(Boolean);
+            return {
+              id: uuid(),
+              text,
+              min,
+              level,
+              done: false,
+            };
+          })
+          .filter(Boolean);
 
-      return { id: uuid(), title, items };
-    });
+        return { id: uuid(), title, items };
+      })
+      .filter((g) => g.items.length > 0);
   }
 
   function addGroupToTasks(group) {
@@ -1048,22 +973,18 @@ function syncThemeIcon() {
 
       const body = card.querySelector(".planCardBody");
 
-      if (!g.items.length) {
-        body.innerHTML = `<div class="planEmpty">Пусто…</div>`;
-      } else {
-        g.items.forEach((t) => {
-          const row = document.createElement("div");
-          row.className = "planTaskRow";
-          row.innerHTML = `
-            <div class="planTaskText">${escapeHTML(t.text)}</div>
-            <div class="planTaskMeta">
-              ${Number.isFinite(Number(t.min)) ? `<span>⏱ ${Number(t.min)}м</span>` : ""}
-              <span>⚡ ${levelLabel(Number(t.level) || 2)}</span>
-            </div>
-          `;
-          body.appendChild(row);
-        });
-      }
+      g.items.forEach((t) => {
+        const row = document.createElement("div");
+        row.className = "planTaskRow";
+        row.innerHTML = `
+          <div class="planTaskText">${escapeHTML(t.text)}</div>
+          <div class="planTaskMeta">
+            ${Number.isFinite(Number(t.min)) ? `<span>⏱ ${Number(t.min)}м</span>` : ""}
+            <span>⚡ ${levelLabel(Number(t.level) || 2)}</span>
+          </div>
+        `;
+        body.appendChild(row);
+      });
 
       const acceptBtn = card.querySelector(".planAcceptBtn");
       const declineBtn = card.querySelector(".planDeclineBtn");
@@ -1130,13 +1051,14 @@ function syncThemeIcon() {
       }
 
       const cards = Array.isArray(data?.cards) ? data.cards : [];
-      if (!cards.length) {
+      const normalized = normalizeCards(cards);
+
+      if (!normalized.length) {
         dbg("🙂 План пустой (0 карточек)");
         openPlanModal(`<div class="planEmpty">План пустой. Напиши больше деталей 🙂</div>`);
         return;
       }
 
-      const normalized = normalizeCards(cards);
       openPlanModal(renderPlanForAccept(normalized));
     } catch (e) {
       console.log("PLAN ERROR:", e);
@@ -1149,7 +1071,7 @@ function syncThemeIcon() {
   }
 
   // =========================
-  // SEND MESSAGE
+  // SEND MESSAGE (text)
   // =========================
   async function sendMessage() {
     if (isLoading) return;
@@ -1159,7 +1081,6 @@ function syncThemeIcon() {
 
     switchScreen("chat");
     pushMsg("user", text);
-
     if (promptEl) promptEl.value = "";
 
     const tg_id = getTgIdOrNull();
@@ -1202,109 +1123,8 @@ function syncThemeIcon() {
   }
 
   // =========================
-  // USER INIT (optional)
+  // ATTACHMENTS
   // =========================
-  async function initUserInDB() {
-    const tg_id = getTgIdOrNull();
-    dbg("initUserInDB: tg_id=" + tg_id);
-
-    if (!tg_id) {
-      dbg("❌ Нет tg_id. Открыто НЕ внутри Telegram или нет user в initDataUnsafe.");
-      return;
-    }
-
-    try {
-      const profile = loadProfile();
-      dbg("➡️ /api/user/init ...");
-
-      const { ok, status, data } = await postJSON(`${API_BASE}/api/user/init`, { tg_id, profile });
-
-      dbg(`⬅️ init ok=${ok} status=${status}`);
-      if (!ok) dbg("init error: " + (data?.error || "unknown"));
-    } catch (e) {
-      dbg("❌ Ошибка initUserInDB: " + String(e?.message || e));
-    }
-  }
-
-  // =========================
-  // DRAWER USER INFO INIT
-  // =========================
-  function initDrawerUser() {
-    const tg = window.Telegram?.WebApp;
-    const u = tg?.initDataUnsafe?.user;
-
-    if (drawerName) drawerName.textContent = u?.first_name ? u.first_name : "User";
-    if (drawerPhone) drawerPhone.textContent = u?.id ? `ID: ${u.id}` : "ID: —";
-    if (drawerAvatar && u?.photo_url) drawerAvatar.src = u.photo_url;
-
-    if (profileName) profileName.value = u?.first_name ? u.first_name : "User";
-
-    const p = loadProfile();
-    if (profileAge) profileAge.value = p.age ?? "";
-    if (profileNick) profileNick.value = p.nick ?? "";
-    if (profileBio) profileBio.value = p.bio ?? "";
-
-    syncThemeIcon();
-  }
-
-  // =========================
-  // MENU + PROFILE SAVE
-  // =========================
-  on(menuProfile, "click", () => {
-    closeDrawer();
-    openProfile();
-  });
-
-  on(menuHistory, "click", () => {
-    historyList?.scrollTo({ top: 0, behavior: "smooth" });
-  });
-
-  on(menuSettings, "click", () => {});
-
-  on(clearHistoryBtn, "click", () => {
-    resetAllChats();
-    renderChatsInHistory();
-    scheduleSyncPush();
-  });
-
-  function saveProfileAndClose() {
-    const p = {
-      age: profileAge?.value ?? "",
-      nick: profileNick?.value ?? "",
-      bio: profileBio?.value ?? "",
-    };
-    saveProfile(p);
-    closeProfile();
-    initUserInDB();
-    syncPull();
-  }
-
-  on(closeProfileBtn, "click", saveProfileAndClose);
-  on(profileOverlay, "click", saveProfileAndClose);
-
-  // =========================
-  // BINDINGS
-  // =========================
-  on(sendBtn, "click", sendMessage);
-  on(promptEl, "keydown", (e) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
-    }
-  });
-
-  on(planBtn, "click", createPlan);
-
-  // ===============================
-  // Attach menu (plus button)
-  // ===============================
-  const plusBtn = document.getElementById("plusBtn");
-  const attach = document.getElementById("attach");
-  const panel = attach?.querySelector(".attach__panel");
-
-  const pickPhoto = document.getElementById("pickPhoto");
-  const pickFile = document.getElementById("pickFile");
-
   function openAttach() {
     if (!attach) return;
     attach.classList.add("is-open");
@@ -1327,18 +1147,15 @@ function syncThemeIcon() {
     toggleAttach();
   });
 
-  // Клик по затемнению — закрыть
+  // click overlay closes
   attach?.addEventListener("click", () => closeAttach());
+  // click panel doesn't close
+  attachPanel?.addEventListener("click", (e) => e.stopPropagation());
 
-  // Клик внутри панели — не закрывать (чтобы label работал)
-  panel?.addEventListener("click", (e) => e.stopPropagation());
-
-  // Esc — закрыть
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") closeAttach();
   });
 
-  // После выбора файла — закрываем меню и обрабатываем
   pickPhoto?.addEventListener("change", () => {
     const file = pickPhoto.files?.[0];
     if (!file) return;
@@ -1364,12 +1181,10 @@ function syncThemeIcon() {
       return;
     }
 
-    // 1) показываем в чате “вложение”
     switchScreen("chat");
     const label = kind === "photo" ? `📷 Фото: ${file.name}` : `📎 Файл: ${file.name}`;
     pushMsg("user", label);
 
-    // 2) готовим form-data
     const fd = new FormData();
     fd.append("tg_id", String(tg_id));
     fd.append("chat_id", String(activeChatId));
@@ -1394,7 +1209,7 @@ function syncThemeIcon() {
         return;
       }
 
-      // если сервер вернул points — обновим
+      // если сервер вернул points — обновим (points всё ещё визуальные, просто синхроним)
       if (Number.isFinite(Number(data?.points))) {
         points = Number(data.points);
         savePoints();
@@ -1410,50 +1225,360 @@ function syncThemeIcon() {
     }
   }
 
-// Open/close + update CTA text like Telegram Premium
-const upgradeBtn = document.querySelector(".pass button");
-const subWin = document.getElementById("screen-subscription");
-const subClose = document.getElementById("subscriptionClose");
-const ctaPrice = document.getElementById("lsdCtaPrice");
+  // =========================
+  // SUBSCRIPTION WINDOW + CTA (UI only)
+  // =========================
+  function openSubscription() {
+    // если у тебя окно отдельным экраном — переключаем
+    if (screenSubscription) {
+      switchScreen("subscription");
+      document.body.style.overflow = "hidden";
+      return;
+    }
 
-function openSubscription() {
-  if (!subWin) return;
-  subWin.classList.add("open");
-  subWin.setAttribute("aria-hidden", "false");
-  document.body.style.overflow = "hidden";
-}
-
-function closeSubscription() {
-  if (!subWin) return;
-  subWin.classList.remove("open");
-  subWin.setAttribute("aria-hidden", "true");
-  document.body.style.overflow = "";
-}
-
-upgradeBtn?.addEventListener("click", openSubscription);
-subClose?.addEventListener("click", closeSubscription);
-
-// update CTA depending on selected plan
-subWin?.addEventListener("change", (e) => {
-  if (!(e.target instanceof HTMLInputElement)) return;
-  if (e.target.name !== "lsd_plan") return;
-
-  if (e.target.value === "year") {
-    if (ctaPrice) ctaPrice.textContent = "13 490 ₸";
-    const btn = document.getElementById("lsdSubscribeBtn");
-    if (btn) btn.innerHTML = `Подключить за <span id="lsdCtaPrice">13 490 ₸</span> в год`;
-  } else {
-    if (ctaPrice) ctaPrice.textContent = "1 790 ₸";
-    const btn = document.getElementById("lsdSubscribeBtn");
-    if (btn) btn.innerHTML = `Подключить за <span id="lsdCtaPrice">1 790 ₸</span> в месяц`;
+    // fallback: если это модалка
+    const subWin = $("screen-subscription");
+    if (!subWin) return;
+    subWin.classList.add("open");
+    subWin.setAttribute("aria-hidden", "false");
+    document.body.style.overflow = "hidden";
   }
-});
 
+  function closeSubscription() {
+    if (screenSubscription) {
+      // возвращаем назад на home
+      switchScreen("home");
+      document.body.style.overflow = "";
+      return;
+    }
 
+    const subWin = $("screen-subscription");
+    if (!subWin) return;
+    subWin.classList.remove("open");
+    subWin.setAttribute("aria-hidden", "true");
+    document.body.style.overflow = "";
+  }
+
+  upgradeBtn?.addEventListener("click", openSubscription);
+  subClose?.addEventListener("click", closeSubscription);
+
+  function setCTA(plan) {
+    selectedPlan = plan === "year" ? "year" : "month";
+    sSet(STORAGE_SUB_PLAN, selectedPlan);
+
+    // UI price only
+    if (selectedPlan === "year") {
+      if (ctaPrice) ctaPrice.textContent = "13 490 ₸";
+      if (lsdSubscribeBtn) lsdSubscribeBtn.innerHTML = `Подключить за <span id="lsdCtaPrice">13 490 ₸</span> в год`;
+    } else {
+      if (ctaPrice) ctaPrice.textContent = "1 790 ₸";
+      if (lsdSubscribeBtn) lsdSubscribeBtn.innerHTML = `Подключить за <span id="lsdCtaPrice">1 790 ₸</span> в месяц`;
+    }
+  }
+
+  // apply persisted plan on boot
+  setCTA(selectedPlan);
+
+  // react to radio changes
+  const subWin = $("screen-subscription");
+  subWin?.addEventListener("change", (e) => {
+    if (!(e.target instanceof HTMLInputElement)) return;
+    if (e.target.name !== "lsd_plan") return;
+    setCTA(e.target.value);
+  });
+
+  // =========================
+  // PURCHASE: lsdSubscribeBtn (REAL PRICE, NOT POINTS)
+  // =========================
+  async function purchaseSubscription() {
+    const tg_id = getTgIdOrNull();
+    if (!tg_id) {
+      tgPopup("Открой мини-апп внутри Telegram, иначе покупка не работает.");
+      return;
+    }
+
+    // Важно: points НЕ участвуют.
+    // Тут только invoice/оплата.
+    if (!tg?.openInvoice) {
+      tgPopup("Оплата доступна только внутри Telegram клиента (openInvoice недоступен).");
+      return;
+    }
+
+    try {
+      if (lsdSubscribeBtn) lsdSubscribeBtn.disabled = true;
+      dbg("➡️ creating invoice...");
+
+      // сервер должен вернуть { invoice: "<invoiceLinkOrPayload>" }
+      // план отправляем как "month" | "year"
+      const { ok, status, data } = await postJSON(`${API_BASE}/api/subscription/invoice`, {
+        tg_id,
+        plan: selectedPlan,
+      });
+
+      if (!ok) {
+        tgPopup("Не удалось создать оплату: " + (data?.error || `status_${status}`));
+        return;
+      }
+
+      const invoice = data?.invoice;
+      if (!invoice) {
+        tgPopup("Сервер не вернул invoice.");
+        return;
+      }
+
+      tg.openInvoice(invoice, async (status) => {
+        // status может быть: "paid" | "cancelled" | "failed"
+        dbg("invoice status: " + status);
+
+        if (status === "paid") {
+          tgPopup("Подписка активирована ✅");
+          closeSubscription();
+
+          // если у тебя есть подтверждение на сервере — дерни
+          // (можешь убрать, если сервер сам всё подтверждает по webhook)
+          await postJSON(`${API_BASE}/api/subscription/confirm`, { tg_id }).catch(() => {});
+        } else if (status === "cancelled") {
+          tgPopup("Оплата отменена.");
+        } else {
+          tgPopup("Оплата не прошла.");
+        }
+      });
+    } catch (e) {
+      tgPopup("Ошибка оплаты: " + String(e?.message || e));
+    } finally {
+      if (lsdSubscribeBtn) lsdSubscribeBtn.disabled = false;
+    }
+  }
+
+  on(lsdSubscribeBtn, "click", purchaseSubscription);
+
+  // =========================
+  // SYNC (push / pull)
+  // =========================
+  function scheduleSyncPush() {
+    clearTimeout(syncTimer);
+    syncTimer = setTimeout(syncPush, 700);
+  }
+
+  function roleToWho(role) {
+    return role === "assistant" ? "ai" : "user";
+  }
+  function whoToRole(who) {
+    return who === "ai" ? "assistant" : "user";
+  }
+
+  async function syncPush() {
+    const tg_id = getTgIdOrNull();
+    if (!tg_id) return;
+
+    const chats_upsert = (chatsIndex || [])
+      .filter((id) => chatCache[id])
+      .map((id) => {
+        const c = chatCache[id];
+        return {
+          chat_id: id,
+          title: c?.meta?.title || "Новый чат",
+          emoji: c?.meta?.emoji || "💬",
+          updated_at: nowISO(c?.meta?.updatedAt || Date.now()),
+        };
+      });
+
+    const messages_upsert = [];
+    (chatsIndex || []).forEach((chat_id) => {
+      const arr = (chatCache[chat_id]?.messages || []).slice(-80);
+      arr.forEach((m) => {
+        if (!m.msg_id) m.msg_id = uuid();
+        messages_upsert.push({
+          chat_id,
+          msg_id: m.msg_id,
+          role: whoToRole(m.who),
+          content: m.text,
+          created_at: nowISO(m.ts || Date.now()),
+        });
+      });
+    });
+
+    await postJSON(`${API_BASE}/api/sync/push`, {
+      tg_id,
+      chats_upsert,
+      messages_upsert,
+      tasks_state: tasksState,
+      points, // points = visual progress only
+    });
+  }
+
+  async function syncPull() {
+    const tg_id = getTgIdOrNull();
+    if (!tg_id) return;
+
+    const { ok, data } = await postJSON(`${API_BASE}/api/sync/pull`, { tg_id });
+    if (!ok) return;
+
+    // chats
+    if (Array.isArray(data?.chats)) {
+      data.chats.forEach((c) => {
+        const id = c.chat_id;
+        if (!id) return;
+
+        if (!chatCache[id]) chatCache[id] = { meta: {}, messages: [] };
+        chatCache[id].meta = {
+          title: c.title || "Новый чат",
+          emoji: c.emoji || "💬",
+          updatedAt: new Date(c.updated_at || Date.now()).getTime(),
+        };
+
+        if (!chatsIndex.includes(id)) chatsIndex.push(id);
+        ensureChat(id);
+      });
+    }
+
+    // messages
+    if (Array.isArray(data?.messages)) {
+      const byChat = new Map();
+
+      data.messages.forEach((m) => {
+        const chat_id = m.chat_id;
+        if (!chat_id) return;
+
+        if (!byChat.has(chat_id)) byChat.set(chat_id, []);
+        byChat.get(chat_id).push({
+          msg_id: m.msg_id,
+          who: roleToWho(m.role),
+          text: m.content,
+          ts: new Date(m.created_at || Date.now()).getTime(),
+        });
+      });
+
+      byChat.forEach((arr, chat_id) => {
+        ensureChat(chat_id);
+
+        const existing = new Set((chatCache[chat_id].messages || []).map((x) => x.msg_id).filter(Boolean));
+
+        arr.forEach((x) => {
+          if (!x.msg_id) x.msg_id = uuid();
+          if (!existing.has(x.msg_id)) chatCache[chat_id].messages.push(x);
+        });
+
+        chatCache[chat_id].messages.sort((a, b) => (a.ts || 0) - (b.ts || 0));
+
+        const last = chatCache[chat_id].messages[chatCache[chat_id].messages.length - 1];
+        if (last?.ts) chatCache[chat_id].meta.updatedAt = last.ts;
+      });
+    }
+
+    // tasks_state
+    if (data?.tasks_state && typeof data.tasks_state === "object") {
+      tasksState = data.tasks_state;
+      saveTasksState();
+    }
+
+    // points
+    if (Number.isFinite(Number(data?.points))) {
+      points = Number(data.points);
+      savePoints();
+    }
+
+    // order chats by freshness
+    chatsIndex = chatsIndex
+      .filter((id) => chatCache[id])
+      .sort((a, b) => (chatCache[b].meta.updatedAt || 0) - (chatCache[a].meta.updatedAt || 0));
+
+    if (!activeChatId || !chatCache[activeChatId]) {
+      activeChatId = chatsIndex[0] || activeChatId;
+    }
+
+    saveChats();
+    renderTasks();
+    renderChatsInHistory();
+    renderMessages();
+  }
+
+  // =========================
+  // PROFILE MODAL
+  // =========================
+  function openProfile() {
+    if (!profileModal || !profileOverlay) return;
+    profileModal.classList.add("open");
+    profileOverlay.classList.add("open");
+    profileModal.setAttribute("aria-hidden", "false");
+  }
+
+  function closeProfile() {
+    if (!profileModal || !profileOverlay) return;
+    profileModal.classList.remove("open");
+    profileOverlay.classList.remove("open");
+    profileModal.setAttribute("aria-hidden", "true");
+  }
+
+  function saveProfileAndClose() {
+    const p = {
+      age: profileAge?.value ?? "",
+      nick: profileNick?.value ?? "",
+      bio: profileBio?.value ?? "",
+    };
+    saveProfile(p);
+    closeProfile();
+    initUserInDB();
+    syncPull();
+  }
+
+  on(menuProfile, "click", () => {
+    closeDrawer();
+    openProfile();
+  });
+
+  on(menuHistory, "click", () => {
+    historyList?.scrollTo({ top: 0, behavior: "smooth" });
+  });
+
+  on(menuSettings, "click", () => {});
+
+  on(clearHistoryBtn, "click", () => {
+    resetAllChats();
+    renderChatsInHistory();
+    scheduleSyncPush();
+  });
+
+  on(closeProfileBtn, "click", saveProfileAndClose);
+  on(profileOverlay, "click", saveProfileAndClose);
+
+  // =========================
+  // DRAWER USER INFO INIT
+  // =========================
+  function initDrawerUser() {
+    const u = tg?.initDataUnsafe?.user;
+
+    if (drawerName) drawerName.textContent = u?.first_name ? u.first_name : "User";
+    if (drawerPhone) drawerPhone.textContent = u?.id ? `ID: ${u.id}` : "ID: —";
+    if (drawerAvatar && u?.photo_url) drawerAvatar.src = u.photo_url;
+
+    if (profileName) profileName.value = u?.first_name ? u.first_name : "User";
+
+    const p = loadProfile();
+    if (profileAge) profileAge.value = p.age ?? "";
+    if (profileNick) profileNick.value = p.nick ?? "";
+    if (profileBio) profileBio.value = p.bio ?? "";
+
+    syncThemeIcon();
+  }
+
+  // =========================
+  // BINDINGS
+  // =========================
+  on(sendBtn, "click", sendMessage);
+  on(promptEl, "keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  });
+
+  on(planBtn, "click", createPlan);
 
   // =========================
   // BOOT
   // =========================
+  // ensure initial chat
   if (!activeChatId) {
     if (Array.isArray(chatsIndex) && chatsIndex.length) activeChatId = chatsIndex[0];
     else {
@@ -1462,8 +1587,10 @@ subWin?.addEventListener("change", (e) => {
     }
   }
   ensureChat(activeChatId);
+
   if (!Array.isArray(chatsIndex)) chatsIndex = [activeChatId];
   if (!chatsIndex.includes(activeChatId)) chatsIndex.unshift(activeChatId);
+
   saveChats();
 
   initDrawerUser();
@@ -1475,11 +1602,12 @@ subWin?.addEventListener("change", (e) => {
 
   switchScreen("home");
 
-  // Telegram init
-  const tg = window.Telegram?.WebApp;
+  // Telegram greeting + init DB
   if (tg) {
-    tg.ready();
-    tg.expand();
+    try {
+      tg.ready();
+      tg.expand();
+    } catch {}
 
     const u = tg.initDataUnsafe?.user;
     if (userEl) userEl.textContent = "Привет, " + (u?.first_name || "друг");
@@ -1488,11 +1616,10 @@ subWin?.addEventListener("change", (e) => {
     if (userEl) userEl.textContent = "Открой внутри Telegram WebApp 🙂";
   }
 
+  // pull now + periodic
   syncPull();
-  setInterval(syncPull, 30000);
+  clearInterval(pullTimer);
+  pullTimer = setInterval(syncPull, 30000);
 
   console.log("[LSD] loaded. activeChatId =", activeChatId);
 });
-
-
-
