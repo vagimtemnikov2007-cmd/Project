@@ -1280,12 +1280,30 @@ window.addEventListener("DOMContentLoaded", () => {
   setCTA(selectedPlan);
 
   // react to radio changes
-  const subWin = $("screen-subscription");
-  subWin?.addEventListener("change", (e) => {
-    if (!(e.target instanceof HTMLInputElement)) return;
-    if (e.target.name !== "lsd_plan") return;
-    setCTA(e.target.value);
-  });
+const subWin = document.getElementById("screen-subscription");
+
+function openSubscription() {
+  if (!subWin) return;
+  subWin.classList.add("open");
+  subWin.setAttribute("aria-hidden", "false");
+  document.body.style.overflow = "hidden";
+}
+
+function closeSubscription() {
+  if (!subWin) return;
+  subWin.classList.remove("open");
+  subWin.setAttribute("aria-hidden", "true");
+  document.body.style.overflow = "";
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  const upgradeBtn = document.querySelector(".pass button");
+  const subClose = document.getElementById("subscriptionClose");
+
+  upgradeBtn?.addEventListener("click", openSubscription);
+  subClose?.addEventListener("click", closeSubscription);
+});
+
 
   // =========================
   // PURCHASE: lsdSubscribeBtn (REAL PRICE, NOT POINTS)
@@ -1601,6 +1619,8 @@ window.addEventListener("DOMContentLoaded", () => {
   cleanupEmptyChats();
 
   switchScreen("home");
+
+  
 
   // Telegram greeting + init DB
   if (tg) {
