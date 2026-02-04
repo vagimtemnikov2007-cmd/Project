@@ -1375,7 +1375,13 @@ async function sendAttachment({ file, kind }) {
     const { ok, status, data } = await postForm(`${API_BASE}/api/chat/attach`, fd);
 
     if (!ok) {
-      pushMsg("ai", "Ошибка сервера: " + (data?.error || `status_${status}`));
+      pushMsg("ai", "Ошибка сервера: " + (data?.error || `status_${status}`));pushMsg(
+  "ai",
+  "Ошибка сервера: " +
+    (data?.error || `status_${status}`) +
+    (data?.details ? ` (${data.details})` : "")
+);
+
       return;
     }
 
