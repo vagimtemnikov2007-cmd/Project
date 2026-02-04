@@ -197,6 +197,13 @@ if (upgradeBtn && screenSubscription) {
 }
   const subClose = $("subscriptionClose");
   const lsdSubscribeBtn = $("lsdSubscribeBtn");
+const subscriptionClose = document.getElementById("subscriptionClose");
+
+subscriptionClose?.addEventListener("click", () => {
+  screenSubscription.classList.remove("open");
+  screenSubscription.setAttribute("aria-hidden", "true");
+  document.body.style.overflow = "";
+});
 
   // =========================
   // STATE
