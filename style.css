@@ -2147,3 +2147,30 @@ body.dark .lsdPrem__back{
 /* subtle glow for logo */
 
 
+main{
+  flex:1;
+  min-height:0;
+  width:100%;
+  padding-top:66px;
+  padding-bottom:86px;
+  overflow: hidden; /* оставляем */
+}
+
+/* важно: активный экран должен скроллиться */
+.screen{
+  display:none;
+  width:100%;
+  height:100%;
+  flex-direction:column;
+  align-items:center;
+  justify-content:flex-start;
+
+  overflow: hidden; /* базово можно */
+}
+
+.screen.active{
+  display:flex;
+  overflow-y: auto;              /* ВОТ ОНО */
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+}
