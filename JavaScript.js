@@ -183,6 +183,8 @@ window.addEventListener("DOMContentLoaded", () => {
   const pickPhoto = $("pickPhoto");
   const pickFile = $("pickFile");
 
+  const lsdCtaPrice = document.getElementById("lsdCtaPrice");
+
   // 🔥 ВАЖНО: кнопка "Обновить план" — ищем надёжно
   // 1) в блоке .pass
   // 2) либо по id (если ты захочешь добавить)
@@ -223,6 +225,21 @@ subscriptionClose?.addEventListener("click", () => {
   let pullTimer = null;
 
   let selectedPlan = sGet(STORAGE_SUB_PLAN, "month") || "month"; // month/year
+
+const PRICES = {
+  month: { stars: 199, label: "199 ⭐/мес" },
+  year:  { stars: 1990, label: "1990 ⭐/год" },
+};
+
+function updateSubscriptionUI() {
+  if (!lsdCtaPrice) return;
+
+  const p = PRICES[selectedPlan] || PRICES.month;
+  lsdCtaPrice.textContent = p.stars + " ⭐";
+
+  // если хочешь, можно ещё менять подпись кнопки:
+  // lsdSubscribeBtn.textContent = `Подключить за ${p.stars} ⭐`;
+}
 
   // =========================
   // EMOJI
@@ -1170,12 +1187,16 @@ subscriptionClose?.addEventListener("click", () => {
     sSet(STORAGE_SUB_PLAN, selectedPlan);
   }
   setSelectedPlan(selectedPlan);
+  updateSubscriptionUI();
+screenSubscription?.addEventListener("change", (e) => {
+  const t = e.target;
+  if (!(t instanceof HTMLInputElement)) return;
+  if (t.name !== "lsd_plan") return;
 
-  screenSubscription?.addEventListener("change", (e) => {
-    if (!(e.target instanceof HTMLInputElement)) return;
-    if (e.target.name !== "lsd_plan") return;
-    setSelectedPlan(e.target.value);
-  });
+  setSelectedPlan(t.value);
+  updateSubscriptionUI();
+});
+
 
   // =========================
   // PURCHASE (Telegram Stars) — FIXED FOR SERVER invoice OBJECT
