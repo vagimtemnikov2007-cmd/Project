@@ -96,7 +96,6 @@ window.addEventListener("DOMContentLoaded", () => {
   const STORAGE_TASKS_GROUPS = "lsd_tasks_groups_v2"; // { groups: [...] }
 
   const EMOJIS = ["💬", "🧠", "⚡", "🧩", "📌", "🎯", "🧊", "🍀", "🌙", "☀️", "🦊", "🐺", "🐼", "🧪", "📚"];
-
   function pickEmoji() {
     return EMOJIS[(Math.random() * EMOJIS.length) | 0];
   }
@@ -167,37 +166,37 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 
   async function postForm(url, formData, timeoutMs = 60000) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-
-  try {
-    dbg("➡️ " + url);
-
-    const res = await fetch(url, {
-      method: "POST",
-      body: formData,
-      signal: controller.signal,
-    });
-
-    const raw = await res.text();
-    let data = null;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
-      data = raw ? JSON.parse(raw) : null;
-    } catch {
-      data = { error: "bad_json_from_server", raw };
-    }
+      dbg("➡️ " + url);
 
-    dbg(`⬅️ status=${res.status} ok=${res.ok}`);
-    return { ok: res.ok, status: res.status, data };
-  } catch (e) {
-    const msg = e?.name === "AbortError" ? `timeout_${timeoutMs}ms` : String(e?.message || e);
-    dbg("❌ fetch error: " + msg);
-    return { ok: false, status: 0, data: { error: msg } };
-  } finally {
-    clearTimeout(timer);
+      const res = await fetch(url, {
+        method: "POST",
+        body: formData,
+        signal: controller.signal,
+      });
+
+      const raw = await res.text();
+      let data = null;
+
+      try {
+        data = raw ? JSON.parse(raw) : null;
+      } catch {
+        data = { error: "bad_json_from_server", raw };
+      }
+
+      dbg(`⬅️ status=${res.status} ok=${res.ok}`);
+      return { ok: res.ok, status: res.status, data };
+    } catch (e) {
+      const msg = e?.name === "AbortError" ? `timeout_${timeoutMs}ms` : String(e?.message || e);
+      dbg("❌ fetch error: " + msg);
+      return { ok: false, status: 0, data: { error: msg } };
+    } finally {
+      clearTimeout(timer);
+    }
   }
-}
 
   // =========================
   // ELEMENTS
@@ -479,12 +478,42 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 
   // =========================
-  // THEME
+  // THEME (FIXED)
   // =========================
-  function syncThemeIcon() {
-    const isDark = document.body.classList.contains("dark");
-    if (themeMiniBtn) themeMiniBtn.textContent = isDark ? "☀️" : "🌙";
-  }
+function syncThemeIcon() {
+  if (!themeMiniBtn) return;
+
+  const isDark = document.body.classList.contains("dark");
+
+  // оффсеты — МОЖЕШЬ КРУТИТЬ
+  const OFFSET_X = 0; // px (влево - / вправо +)
+  const OFFSET_Y = 1; // px (вверх - / вниз +)
+
+  themeMiniBtn.innerHTML = `
+    <span
+      style="
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 24px;
+        height: 24px;
+      "
+    >
+      <img
+        src="${isDark ? "img/icons8-sun-48.svg" : "img/moon-20.svg"}"
+        alt="theme"
+        width="22"
+        height="22"
+        style="
+          transform: translate(${OFFSET_X}px, ${OFFSET_Y}px);
+          ${isDark ? "filter: invert(1);" : ""}
+        "
+      />
+    </span>
+  `;
+}
+
+
 
   on(themeMiniBtn, "click", () => {
     document.body.classList.toggle("dark");
@@ -778,9 +807,6 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 
   function calcGroupPoints(g) {
-    // простая формула:
-    // +1 за каждую задачу
-    // + ещё 1 за каждые 30 минут суммарно (min)
     const meta = groupMeta(g);
     const p1 = meta.itemsCount;
     const p2 = Math.max(0, Math.floor((meta.totalMin || 0) / 30));
@@ -810,7 +836,6 @@ window.addEventListener("DOMContentLoaded", () => {
       wrap.className = "taskGroup";
       wrap.dataset.groupId = g.id;
 
-      // submit visible only when all done AND not submitted
       const showSubmit = meta.allDone && !submitted;
       const groupPoints = calcGroupPoints(g);
 
@@ -839,7 +864,6 @@ window.addEventListener("DOMContentLoaded", () => {
         renderTasks();
       });
 
-      // submit bar (top inside body)
       if (submitted) {
         const okBar = document.createElement("div");
         okBar.className = "taskSubmitBar done";
@@ -852,8 +876,6 @@ window.addEventListener("DOMContentLoaded", () => {
         bar.textContent = `🏁 Сдать задание (+${groupPoints} очков)`;
         bar.addEventListener("click", (ev) => {
           ev.stopPropagation();
-
-          // защита от двойного клика
           if (g.submitted) return;
 
           g.submitted = true;
@@ -869,7 +891,6 @@ window.addEventListener("DOMContentLoaded", () => {
         body.appendChild(bar);
       }
 
-      // tasks list
       const items = Array.isArray(g.items) ? g.items : [];
       if (!items.length) {
         const empty = document.createElement("div");
@@ -895,9 +916,6 @@ window.addEventListener("DOMContentLoaded", () => {
           const cb = row.querySelector("input[type='checkbox']");
           cb.addEventListener("change", () => {
             t.done = !!cb.checked;
-
-            // если пользователь снял галочку — снимаем "submitted"
-            // (иначе можно сдать и потом поменять)
             if (!t.done) g.submitted = false;
 
             saveTasksState();
@@ -1278,128 +1296,160 @@ window.addEventListener("DOMContentLoaded", () => {
   on(planBtn, "click", createPlan);
 
   // ===============================
-// Attach menu (plus button)
-// ===============================
+  // Attach menu (plus button)
+  // ===============================
+  const plusBtn = document.getElementById("plusBtn");
+  const attach = document.getElementById("attach");
+  const panel = attach?.querySelector(".attach__panel");
 
-const plusBtn = document.getElementById("plusBtn");
-const attach = document.getElementById("attach");
-const panel = attach?.querySelector(".attach__panel");
+  const pickPhoto = document.getElementById("pickPhoto");
+  const pickFile = document.getElementById("pickFile");
 
-const pickPhoto = document.getElementById("pickPhoto");
-const pickFile = document.getElementById("pickFile");
-
-function openAttach() {
-  if (!attach) return;
-  attach.classList.add("is-open");
-  attach.setAttribute("aria-hidden", "false");
-}
-
-function closeAttach() {
-  if (!attach) return;
-  attach.classList.remove("is-open");
-  attach.setAttribute("aria-hidden", "true");
-}
-
-function toggleAttach() {
-  if (!attach) return;
-  attach.classList.contains("is-open") ? closeAttach() : openAttach();
-}
-
-plusBtn?.addEventListener("click", (e) => {
-  e.stopPropagation();
-  toggleAttach();
-});
-
-// Клик по затемнению — закрыть
-attach?.addEventListener("click", () => closeAttach());
-
-// Клик внутри панели — не закрывать (чтобы label работал)
-panel?.addEventListener("click", (e) => e.stopPropagation());
-
-// Esc — закрыть
-document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape") closeAttach();
-});
-
-// После выбора файла — закрываем меню и обрабатываем
-pickPhoto?.addEventListener("change", () => {
-  const file = pickPhoto.files?.[0];
-  if (!file) return;
-  closeAttach();
-  sendAttachment({ file, kind: "photo" });
-  pickPhoto.value = ""; // чтобы можно было выбрать тот же файл снова
-});
-
-pickFile?.addEventListener("change", () => {
-  const file = pickFile.files?.[0];
-  if (!file) return;
-  closeAttach();
-  sendAttachment({ file, kind: "file" });
-  pickFile.value = "";
-});
-
-
-
-async function sendAttachment({ file, kind }) {
-  if (isLoading) return;
-
-  const tg_id = getTgIdOrNull();
-  if (!tg_id) {
-    pushMsg("ai", "Открой мини-апп внутри Telegram, иначе tg_id не приходит.");
-    return;
+  function openAttach() {
+    if (!attach) return;
+    attach.classList.add("is-open");
+    attach.setAttribute("aria-hidden", "false");
   }
 
-  // 1) показываем в чате “вложение”
-  switchScreen("chat");
-  const label = kind === "photo" ? `📷 Фото: ${file.name}` : `📎 Файл: ${file.name}`;
-  pushMsg("user", label);
+  function closeAttach() {
+    if (!attach) return;
+    attach.classList.remove("is-open");
+    attach.setAttribute("aria-hidden", "true");
+  }
 
-  // 2) готовим form-data
-  const fd = new FormData();
-  fd.append("tg_id", String(tg_id));
-  fd.append("chat_id", String(activeChatId));
-  fd.append("kind", kind); // "photo" | "file"
-  fd.append("file", file);
+  function toggleAttach() {
+    if (!attach) return;
+    attach.classList.contains("is-open") ? closeAttach() : openAttach();
+  }
 
-  // можно прикрепить текст-пояснение (если хочешь)
-  // fd.append("text", "Проанализируй вложение.");
+  plusBtn?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    toggleAttach();
+  });
 
-  // profile можно тоже отправить (если серверу надо)
-  fd.append("profile", JSON.stringify(loadProfile() || {}));
+  // Клик по затемнению — закрыть
+  attach?.addEventListener("click", () => closeAttach());
 
-  isLoading = true;
-  if (sendBtn) sendBtn.disabled = true;
-  if (chatTypingEl) chatTypingEl.hidden = false;
+  // Клик внутри панели — не закрывать (чтобы label работал)
+  panel?.addEventListener("click", (e) => e.stopPropagation());
 
-  try {
-    const { ok, status, data } = await postForm(`${API_BASE}/api/chat/attach`, fd);
+  // Esc — закрыть
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeAttach();
+  });
 
-    if (!ok) {
-      pushMsg("ai", "Ошибка сервера: " + (data?.error || `status_${status}`));pushMsg(
-  "ai",
-  "Ошибка сервера: " +
-    (data?.error || `status_${status}`) +
-    (data?.details ? ` (${data.details})` : "")
-);
+  // После выбора файла — закрываем меню и обрабатываем
+  pickPhoto?.addEventListener("change", () => {
+    const file = pickPhoto.files?.[0];
+    if (!file) return;
+    closeAttach();
+    sendAttachment({ file, kind: "photo" });
+    pickPhoto.value = "";
+  });
 
+  pickFile?.addEventListener("change", () => {
+    const file = pickFile.files?.[0];
+    if (!file) return;
+    closeAttach();
+    sendAttachment({ file, kind: "file" });
+    pickFile.value = "";
+  });
+
+  async function sendAttachment({ file, kind }) {
+    if (isLoading) return;
+
+    const tg_id = getTgIdOrNull();
+    if (!tg_id) {
+      pushMsg("ai", "Открой мини-апп внутри Telegram, иначе tg_id не приходит.");
       return;
     }
 
-    // если сервер вернул points — обновим
-    if (Number.isFinite(Number(data?.points))) {
-      points = Number(data.points);
-      savePointsCache ? savePointsCache() : (sSet(STORAGE_POINTS, String(points)), renderPointsBar());
-    }
+    // 1) показываем в чате “вложение”
+    switchScreen("chat");
+    const label = kind === "photo" ? `📷 Фото: ${file.name}` : `📎 Файл: ${file.name}`;
+    pushMsg("user", label);
 
-    pushMsg("ai", String(data?.text || "").trim() || "AI вернул пустой ответ 😶");
-  } catch (e) {
-    pushMsg("ai", "Не удалось подключиться к серверу.");
-  } finally {
-    isLoading = false;
-    if (sendBtn) sendBtn.disabled = false;
-    if (chatTypingEl) chatTypingEl.hidden = true;
+    // 2) готовим form-data
+    const fd = new FormData();
+    fd.append("tg_id", String(tg_id));
+    fd.append("chat_id", String(activeChatId));
+    fd.append("kind", kind); // "photo" | "file"
+    fd.append("file", file);
+    fd.append("profile", JSON.stringify(loadProfile() || {}));
+
+    isLoading = true;
+    if (sendBtn) sendBtn.disabled = true;
+    if (chatTypingEl) chatTypingEl.hidden = false;
+
+    try {
+      const { ok, status, data } = await postForm(`${API_BASE}/api/chat/attach`, fd);
+
+      if (!ok) {
+        pushMsg(
+          "ai",
+          "Ошибка сервера: " +
+            (data?.error || `status_${status}`) +
+            (data?.details ? ` (${data.details})` : "")
+        );
+        return;
+      }
+
+      // если сервер вернул points — обновим
+      if (Number.isFinite(Number(data?.points))) {
+        points = Number(data.points);
+        savePoints();
+      }
+
+      pushMsg("ai", String(data?.text || "").trim() || "AI вернул пустой ответ 😶");
+    } catch (e) {
+      pushMsg("ai", "Не удалось подключиться к серверу.");
+    } finally {
+      isLoading = false;
+      if (sendBtn) sendBtn.disabled = false;
+      if (chatTypingEl) chatTypingEl.hidden = true;
+    }
   }
+
+// Open/close + update CTA text like Telegram Premium
+const upgradeBtn = document.querySelector(".pass button");
+const subWin = document.getElementById("screen-subscription");
+const subClose = document.getElementById("subscriptionClose");
+const ctaPrice = document.getElementById("lsdCtaPrice");
+
+function openSubscription() {
+  if (!subWin) return;
+  subWin.classList.add("open");
+  subWin.setAttribute("aria-hidden", "false");
+  document.body.style.overflow = "hidden";
 }
+
+function closeSubscription() {
+  if (!subWin) return;
+  subWin.classList.remove("open");
+  subWin.setAttribute("aria-hidden", "true");
+  document.body.style.overflow = "";
+}
+
+upgradeBtn?.addEventListener("click", openSubscription);
+subClose?.addEventListener("click", closeSubscription);
+
+// update CTA depending on selected plan
+subWin?.addEventListener("change", (e) => {
+  if (!(e.target instanceof HTMLInputElement)) return;
+  if (e.target.name !== "lsd_plan") return;
+
+  if (e.target.value === "year") {
+    if (ctaPrice) ctaPrice.textContent = "13 490 ₸";
+    const btn = document.getElementById("lsdSubscribeBtn");
+    if (btn) btn.innerHTML = `Подключить за <span id="lsdCtaPrice">13 490 ₸</span> в год`;
+  } else {
+    if (ctaPrice) ctaPrice.textContent = "1 790 ₸";
+    const btn = document.getElementById("lsdSubscribeBtn");
+    if (btn) btn.innerHTML = `Подключить за <span id="lsdCtaPrice">1 790 ₸</span> в месяц`;
+  }
+});
+
+
 
   // =========================
   // BOOT
@@ -1443,3 +1493,6 @@ async function sendAttachment({ file, kind }) {
 
   console.log("[LSD] loaded. activeChatId =", activeChatId);
 });
+
+
+

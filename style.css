@@ -492,7 +492,8 @@ body.dark .chatTitle{
   height: 56px;
   border: 0;
   background: var(--input-bg);
-  padding: 0 6px;
+  padding: 0 0px;
+  margin: -7px;
   font-size: 16px;
   outline: none;
   color: var(--input-text);
@@ -503,7 +504,7 @@ body.dark .chatTitle{
 /* send btn */
 .search_bt{
   width:46px;
-  height:46px;
+  height:43px;
   border-radius: 50%;
   border:0;
   background: var(--accent);
@@ -1673,4 +1674,476 @@ body.dark .taskGroupBody{
 .msgBtn.decline{ background: rgba(0,0,0,0.08); color: var(--text); }
 body.dark .msgBtn.decline{ background: rgba(255,255,255,0.12); }
 .msgBtn:active{ transform: scale(.99); opacity:.9; }
+
+/* LSD Premium — Telegram Premium style (drop-in) */
+.lsdPrem{
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: none;
+  background: #fff;
+  color: #111;
+}
+.lsdPrem.open{ display:block; }
+
+.lsdPrem__inner{
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* TOP gradient like Telegram Premium */
+.lsdPrem__top{
+  position: relative;
+  padding: 14px 16px 18px;
+  background: radial-gradient(1200px 600px at 50% 0%,
+    rgba(255, 255, 255, 0.315),
+    rgba(255,255,255,0.00) 60%),
+    linear-gradient(135deg, #7b6cff, #b66bff 55%, #8b7bff);
+  color: #fff;
+  overflow: hidden;
+}
+
+
+
+/* sparkles */
+.lsdPrem__top::before{
+  content:"";
+  position:absolute; inset:-40px;
+  background:
+    radial-gradient(circle at 18% 20%, rgba(255,255,255,.65) 0 1px, transparent 2px),
+    radial-gradient(circle at 35% 35%, rgba(255,255,255,.55) 0 1px, transparent 2px),
+    radial-gradient(circle at 60% 18%, rgba(255,255,255,.55) 0 1px, transparent 2px),
+    radial-gradient(circle at 72% 40%, rgba(255,255,255,.45) 0 1px, transparent 2px),
+    radial-gradient(circle at 85% 25%, rgba(255,255,255,.40) 0 1px, transparent 2px),
+    radial-gradient(circle at 25% 55%, rgba(255,255,255,.35) 0 1px, transparent 2px),
+    radial-gradient(circle at 50% 55%, rgba(255,255,255,.35) 0 1px, transparent 2px);
+  opacity: .9;
+  pointer-events:none;
+}
+
+.lsdPrem__back{
+  position: relative;
+  z-index: 1;
+  border: 0;
+  background: transparent;
+  color: #fff;
+  font-size: 22px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  cursor: pointer;
+}
+.lsdPrem__back:active{ transform: scale(.98); opacity:.9; }
+
+.lsdPrem__hero{
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 6px 10px 0;
+}
+.lsdPrem__logo{
+  width: 92px;
+  height: 92px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 2px;
+  filter: brightness(0) invert(1);
+  opacity: 0.95;
+  
+
+  animation: logoFloat 4.5s ease-in-out infinite;
+}
+
+.lsdPrem__logo img{
+  width: 150px;
+  height: auto;
+  animation: logoGlow 4.5s ease-in-out infinite;
+}
+
+/* плавное "дыхание" */
+@keyframes logoFloat{
+  0%{
+    transform: translateY(0) scale(1);
+  }
+  50%{
+    transform: translateY(-4px) scale(1.04);
+  }
+  100%{
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* мягкое свечение */
+@keyframes logoGlow{
+  0%{
+    filter: drop-shadow(0 0 0 rgba(255,255,255,0));
+    opacity: 0.95;
+  }
+  50%{
+    filter: drop-shadow(0 8px 24px rgba(255, 255, 255, 0.603));
+    opacity: 1;
+  }
+  100%{
+    filter: drop-shadow(0 0 0 rgba(255,255,255,0));
+    opacity: 0.95;
+  }
+}
+
+/* LOGO particles (CSS only) */
+.lsdPrem__logo{
+  position: relative;
+  overflow: visible;
+}
+
+/* слой частиц 1 */
+.lsdPrem__logo::before{
+  content:"";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.95);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 0;
+
+  /* много частиц через box-shadow */
+  box-shadow:
+    22px -10px 0 rgba(255,255,255,.75),
+   -18px -16px 0 rgba(255,255,255,.60),
+    10px -26px 0 rgba(255,255,255,.55),
+   -26px  6px 0 rgba(255,255,255,.50),
+    28px  14px 0 rgba(255,255,255,.45),
+   -10px  24px 0 rgba(255,255,255,.40),
+     6px  30px 0 rgba(255,255,255,.35),
+   -30px -2px 0 rgba(255,255,255,.50);
+
+  animation: lsdParticlesA 1.8s ease-out infinite;
+  filter: drop-shadow(0 6px 14px rgba(255,255,255,.25));
+}
+
+/* слой частиц 2 (другие позиции + сдвиг по времени) */
+.lsdPrem__logo::after{
+  content:"";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 4px;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.9);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 0;
+
+  box-shadow:
+    16px -22px 0 rgba(255,255,255,.55),
+   -14px -28px 0 rgba(255,255,255,.40),
+    30px  -2px 0 rgba(255,255,255,.35),
+   -28px  18px 0 rgba(255,255,255,.30),
+    12px  28px 0 rgba(255,255,255,.30),
+   -6px   34px 0 rgba(255,255,255,.22),
+    34px  18px 0 rgba(255,255,255,.22),
+   -34px -10px 0 rgba(255,255,255,.28);
+
+  animation: lsdParticlesB 2.2s ease-out infinite;
+  animation-delay: .55s;
+  filter: drop-shadow(0 6px 14px rgba(255,255,255,.18));
+}
+
+/* сам img поверх частиц */
+.lsdPrem__logo img{
+  position: relative;
+  z-index: 1;
+}
+
+/* анимации “вылета” */
+@keyframes lsdParticlesA{
+  0%{
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(.55);
+  }
+  12%{
+    opacity: 1;
+  }
+  70%{
+    opacity: .6;
+  }
+  100%{
+    opacity: 0;
+    transform: translate(-50%, -62%) scale(1.35);
+  }
+}
+
+@keyframes lsdParticlesB{
+  0%{
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(.6);
+  }
+  18%{
+    opacity: 1;
+  }
+  75%{
+    opacity: .5;
+  }
+  100%{
+    opacity: 0;
+    transform: translate(-50%, -68%) scale(1.55);
+  }
+}
+
+/* уважение к reduce motion */
+@media (prefers-reduced-motion: reduce){
+  .lsdPrem__logo::before,
+  .lsdPrem__logo::after{
+    animation: none;
+    opacity: .35;
+  }
+}
+
+.lsdPrem__title{
+  margin: 12px 0 6px;
+  font-size: 26px;
+  font-weight: 900;
+  letter-spacing: .2px;
+}
+.lsdPrem__subtitle{
+  margin: 0;
+  font-size: 14px;
+  opacity: .92;
+  max-width: 340px;
+  line-height: 1.35;
+}
+
+/* CONTENT */
+.lsdPrem__content{
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px 14px 18px;
+  background: #f4f4f6;
+}
+
+/* pay card */
+.lsdPrem__payCard{
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 8px 22px rgba(0,0,0,.06);
+  overflow: hidden;
+}
+
+.lsdPrem__payRow{
+  display: grid;
+  grid-template-columns: 26px 18px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 14px;
+  cursor: pointer;
+}
+.lsdPrem__payRow input{ display:none; }
+
+.lsdPrem__radio{
+  width: 22px; height: 22px;
+  border-radius: 999px;
+  border: 2px solid rgba(0,0,0,.18);
+  display:inline-block;
+  position: relative;
+}
+.lsdPrem__payRow input:checked + .lsdPrem__radio{
+  border-color: rgba(123, 102, 255, 1);
+}
+.lsdPrem__payRow input:checked + .lsdPrem__radio::after{
+  content:"";
+  position:absolute; inset: 4px;
+  border-radius: 999px;
+  background: rgba(123, 102, 255, 1);
+}
+
+.lsdPrem__payTitle{
+  font-size: 16px;
+  font-weight: 900;
+  display:flex;
+  align-items:center;
+  gap: 10px;
+}
+.lsdPrem__badge{
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(123,102,255,.12);
+  color: rgba(123,102,255,1);
+  font-weight: 900;
+}
+.lsdPrem__paySmall{
+  margin-top: 6px;
+  font-size: 13px;
+  opacity: .75;
+  display:flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.lsdPrem__strike{ text-decoration: line-through; opacity: .75; }
+
+.lsdPrem__payRight{
+  text-align: right;
+  font-weight: 800;
+  opacity: .85;
+  white-space: nowrap;
+}
+.lsdPrem__divider{
+  height: 1px;
+  background: rgba(0,0,0,.06);
+}
+
+/* list of benefits */
+.lsdPrem__list{
+  margin-top: 12px;
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 8px 22px rgba(0,0,0,.06);
+  overflow: hidden;
+}
+.lsdPrem__item{
+  display: grid;
+  grid-template-columns: 44px 1fr 18px;
+  gap: 10px;
+  padding: 14px 14px;
+  align-items: center;
+}
+.lsdPrem__item + .lsdPrem__item{
+  border-top: 1px solid rgba(0,0,0,.06);
+}
+.lsdPrem__ico{
+  width: 36px; height: 36px;
+  border-radius: 12px;
+  background: rgba(255, 138, 60, .14);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size: 18px;
+}
+.lsdPrem__itemTitle{
+  font-size: 15px;
+  font-weight: 900;
+  margin-bottom: 4px;
+}
+.lsdPrem__itemText{
+  font-size: 13px;
+  opacity: .72;
+  line-height: 1.35;
+}
+.lsdPrem__chev{
+  font-size: 22px;
+  opacity: .35;
+  transform: translateY(-1px);
+}
+
+/* CTA */
+.lsdPrem__ctaWrap{
+  margin-top: 14px;
+  padding-bottom: 6px;
+}
+.lsdPrem__cta{
+  width: 100%;
+  border: 0;
+  border-radius: 16px;
+  padding: 14px 14px;
+  font-weight: 900;
+  color: #fff;
+  cursor: pointer;
+  background: linear-gradient(135deg, #8c6cff, #c96bff 60%, #8b7bff);
+  box-shadow: 0 10px 26px rgba(123,102,255,.24);
+}
+.lsdPrem__cta:active{ transform: scale(.99); opacity: .96; }
+.lsdPrem__hint{
+  margin-top: 10px;
+  text-align: center;
+  font-size: 12px;
+  opacity: .65;
+}
+
+
+/* =========================
+   LSD PREMIUM — DARK THEME
+========================= */
+
+body.dark .lsdPrem{
+  background: #0f1115;
+  color: #eaeaf0;
+}
+
+/* top gradient */
+body.dark .lsdPrem__top{
+  background:
+    radial-gradient(1200px 600px at 50% 0%,
+      rgba(255,255,255,0.08),
+      rgba(255,255,255,0.00) 60%),
+    linear-gradient(135deg, #5e58fa, #995bfd 55%, #6461f8);
+}
+
+/* content background */
+body.dark .lsdPrem__content{
+  background: #0f1115;
+}
+
+
+
+/* cards */
+body.dark .lsdPrem__payCard,
+body.dark .lsdPrem__list{
+  background: #181a20;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.719);
+}
+
+/* divider */
+body.dark .lsdPrem__divider{
+  background: rgba(255,255,255,.08);
+}
+
+/* radio */
+body.dark .lsdPrem__radio{
+  border-color: rgba(255,255,255,.25);
+}
+
+body.dark .lsdPrem__payRow input:checked + .lsdPrem__radio{
+  border-color: #9c8cff;
+}
+body.dark .lsdPrem__payRow input:checked + .lsdPrem__radio::after{
+  background: #9c8cff;
+}
+
+/* texts */
+body.dark .lsdPrem__paySmall,
+body.dark .lsdPrem__itemText,
+body.dark .lsdPrem__hint{
+  opacity: .7;
+}
+
+/* benefit items */
+body.dark .lsdPrem__item + .lsdPrem__item{
+  border-top: 1px solid rgba(255,255,255,.08);
+}
+
+body.dark .lsdPrem__ico{
+  background: #9c8cff;
+}
+
+/* CTA button */
+body.dark .lsdPrem__cta{
+  background: linear-gradient(135deg, #6f6bff, #a36bff 60%, #7b7dff);
+  box-shadow: 0 10px 26px rgba(124,104,255,.45);
+}
+
+/* back button */
+body.dark .lsdPrem__back{
+  color: #fff;
+}
+
+/* subtle glow for logo */
+
 

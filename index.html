@@ -122,10 +122,7 @@
         <span class="tgMenuText">Мой профиль</span>
       </button>
 
-      <button class="tgMenuItem" id="menuSettings" type="button">
-        <span class="tgMenuIcon">⚙️</span>
-        <span class="tgMenuText">Настройки</span>
-      </button>
+ 
     </div>
 
     <div class="tgHistoryBlock">
@@ -154,6 +151,10 @@
         <button type="button">Обновить План</button>
       </div>
     </div>
+
+
+
+
 
     <div class="profileCard">
       <div class="field">
@@ -224,6 +225,136 @@
     </label>
   </div>
 </div>
+
+
+<!-- LSD Premium screen (standalone window like Telegram Premium) -->
+<div id="screen-subscription" class="lsdPrem" aria-hidden="true">
+  <div class="lsdPrem__inner">
+    <!-- TOP -->
+    <header class="lsdPrem__top">
+      <button class="lsdPrem__back" id="subscriptionClose" type="button" aria-label="Назад">←</button>
+
+      <div class="lsdPrem__hero">
+        <div class="lsdPrem__logo" aria-hidden="true">
+          <!-- star -->
+         <img src="img/telegrammpremium.svg" alt="">
+       
+        </div>
+
+        <h1 class="lsdPrem__title">LSD Premium</h1>
+        <p class="lsdPrem__subtitle">
+          Больше свободы и удобства с подпиской LSD Premium.
+        </p>
+      </div>
+    </header>
+
+    <!-- CONTENT -->
+    <main class="lsdPrem__content">
+      <!-- PRICING CARD -->
+      <section class="lsdPrem__payCard" aria-label="Тарифы">
+        <label class="lsdPrem__payRow">
+          <input type="radio" name="lsd_plan" value="year" checked />
+          <span class="lsdPrem__radio"></span>
+
+          <div class="lsdPrem__payMid">
+            <div class="lsdPrem__payTitle">
+              Ежегодно <span class="lsdPrem__badge">-37%</span>
+            </div>
+            <div class="lsdPrem__paySmall">
+              <span>13 490 ₸ в год</span>
+            </div>
+          </div>
+
+          <div class="lsdPrem__payRight">
+            <div class="lsdPrem__payPrice">1 124 ₸/мес</div>
+          </div>
+        </label>
+
+        <div class="lsdPrem__divider"></div>
+
+        <label class="lsdPrem__payRow">
+          <input type="radio" name="lsd_plan" value="month" />
+          <span class="lsdPrem__radio"></span>
+
+          <div class="lsdPrem__payMid">
+            <div class="lsdPrem__payTitle">Ежемесячно</div>
+          </div>
+
+          <div class="lsdPrem__payRight">
+            <div class="lsdPrem__payPrice">1 790 ₸/мес</div>
+          </div>
+        </label>
+      </section>
+
+      <!-- BENEFITS -->
+      <section class="lsdPrem__list" aria-label="Преимущества">
+        <div class="lsdPrem__item">
+          <div class="lsdPrem__ico" aria-hidden="true">⚡</div>
+          <div class="lsdPrem__itemMid">
+            <div class="lsdPrem__itemTitle">Умные планы за 1 клик</div>
+            <div class="lsdPrem__itemText">
+              заполнитель...
+            </div>
+          </div>
+          
+        </div>
+
+        <div class="lsdPrem__item">
+          <div class="lsdPrem__ico" aria-hidden="true">☁️</div>
+          <div class="lsdPrem__itemMid">
+            <div class="lsdPrem__itemTitle">Синхронизация между устройствами</div>
+            <div class="lsdPrem__itemText">
+               заполнитель...
+            </div>
+          </div>
+        
+        </div>
+
+        <div class="lsdPrem__item">
+          <div class="lsdPrem__ico" aria-hidden="true">📎</div>
+          <div class="lsdPrem__itemMid">
+            <div class="lsdPrem__itemTitle">Файлы и фото в чат</div>
+            <div class="lsdPrem__itemText">
+               заполнитель...
+            </div>
+          </div>
+         
+        </div>
+
+        <div class="lsdPrem__item">
+          <div class="lsdPrem__ico" aria-hidden="true">🏆</div>
+          <div class="lsdPrem__itemMid">
+            <div class="lsdPrem__itemTitle">Очки и мотивация</div>
+            <div class="lsdPrem__itemText">
+               заполнитель...
+            </div>
+          </div>
+          
+        </div>
+
+        <div class="lsdPrem__item">
+          <div class="lsdPrem__ico" aria-hidden="true">🧠</div>
+          <div class="lsdPrem__itemMid">
+            <div class="lsdPrem__itemTitle">Память и контекст</div>
+            <div class="lsdPrem__itemText">
+               заполнитель...
+            </div>
+          </div>
+          
+        </div>
+      </section>
+
+      <!-- CTA -->
+      <div class="lsdPrem__ctaWrap">
+        <button id="lsdSubscribeBtn" class="lsdPrem__cta" type="button">
+          Подключить за <span id="lsdCtaPrice">13 490 ₸</span> в год
+        </button>
+        <div class="lsdPrem__hint">Подписку можно отменить в любой момент.</div>
+      </div>
+    </main>
+  </div>
+</div>
+
 
   <script src="./JavaScript.js" defer></script>
 </body>
