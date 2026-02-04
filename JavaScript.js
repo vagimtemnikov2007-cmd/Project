@@ -186,9 +186,15 @@ window.addEventListener("DOMContentLoaded", () => {
   // 🔥 ВАЖНО: кнопка "Обновить план" — ищем надёжно
   // 1) в блоке .pass
   // 2) либо по id (если ты захочешь добавить)
-  const upgradeBtn =
-    document.querySelector(".pass button") || $("upgradeBtn");
+const upgradeBtn = document.getElementById("upgradeBtn");
 
+if (upgradeBtn && screenSubscription) {
+  upgradeBtn.addEventListener("click", () => {
+    screenSubscription.classList.add("open");
+    screenSubscription.setAttribute("aria-hidden", "false");
+    document.body.style.overflow = "hidden";
+  });
+}
   const subClose = $("subscriptionClose");
   const lsdSubscribeBtn = $("lsdSubscribeBtn");
 
