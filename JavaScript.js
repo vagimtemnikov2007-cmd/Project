@@ -1212,34 +1212,34 @@ screenSubscription?.addEventListener("change", (e) => {
     try {
       if (lsdSubscribeBtn) lsdSubscribeBtn.disabled = true;
 
-      const { ok, status, data } = await postJSON(`${API_BASE}/api/subscription/invoice`, {
-        tg_id,
-        plan: selectedPlan,
-      });
+const { ok, status, data } = await postJSON(`${API_BASE}/api/subscription/invoice`, {
+  tg_id,
+  plan: selectedPlan,
+});
 
-      if (!ok) {
-        tgPopup("Не удалось создать оплату: " + (data?.error || `status_${status}`));
-        return;
-      }
+if (!ok) {
+  tgPopup("Не удалось создать оплату: " + (data?.error || `status_${status}`));
+  return;
+}
 
-      const invoice = data?.invoice;
-      if (!invoice || typeof invoice !== "object") {
-        tgPopup("Сервер вернул неправильный invoice.");
-        return;
-      }
+const invoiceUrl = data?.invoice_url;
+if (!invoiceUrl || typeof invoiceUrl !== "string") {
+  tgPopup("Сервер вернул неправильный invoice_url.");
+  return;
+}
 
-      // ⭐ Telegram Stars: в WebApp openInvoice можно передать invoice object
-      tg.openInvoice(invoice, (status) => {
-        if (status === "paid") {
-          tgPopup("Оплата прошла ✅");
-          closeSubscription();
-          // Подтверждение/активация подписки будет через webhook на сервере (следующий шаг)
-        } else if (status === "cancelled") {
-          tgPopup("Оплата отменена.");
-        } else {
-          tgPopup("Оплата не прошла.");
-        }
-      });
+// ВАЖНО: openInvoice принимает СТРОКУ (invoice link)
+tg.openInvoice(invoiceUrl, (status) => {
+  if (status === "paid") {
+    tgPopup("Оплата прошла ✅");
+    closeSubscription();
+  } else if (status === "cancelled") {
+    tgPopup("Оплата отменена.");
+  } else {
+    tgPopup("Оплата не прошла.");
+  }
+});
+
     } catch (e) {
       tgPopup("Ошибка оплаты: " + String(e?.message || e));
     } finally {
