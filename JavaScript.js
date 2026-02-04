@@ -1,4 +1,4 @@
-// LSD Front — FULL (Chats + Plan Accept/Decline + Grouped Tasks + Points + Sync Push/Pull + Attachments + Subscription + Purchase)
+// LSD Front — FULL (Chats + Plan Accept/Decline + Grouped Tasks + Points + Sync + Attachments + Subscription + Stars Purchase)
 // Drop-in replacement for your current JavaScript.js
 
 window.addEventListener("DOMContentLoaded", () => {
@@ -111,69 +111,52 @@ window.addEventListener("DOMContentLoaded", () => {
   // =========================
   const API_BASE = "https://lsd-server-ml3z.onrender.com";
 
-  // profile
   const STORAGE_PROFILE = "lsd_profile_v2";
-
-  // points (VISUAL ONLY, NOT CURRENCY)
   const STORAGE_POINTS = "lsd_points_v1";
 
-  // chats
   const STORAGE_ACTIVE_CHAT = "lsd_active_chat_v3";
   const STORAGE_CHATS_INDEX = "lsd_chats_index_v1";
   const STORAGE_CHAT_CACHE = "lsd_chat_cache_v3";
 
-  // grouped tasks
-  const STORAGE_TASKS_GROUPS = "lsd_tasks_groups_v2"; // { groups: [...] }
-
-  // subscription selection UI (optional persist)
-  const STORAGE_SUB_PLAN = "lsd_sub_plan_v1"; // "month" | "year"
+  const STORAGE_TASKS_GROUPS = "lsd_tasks_groups_v2";
+  const STORAGE_SUB_PLAN = "lsd_sub_plan_v1"; // month | year
 
   // =========================
   // UI ELEMENTS
   // =========================
-  // drawer
   const settingsBtn = document.querySelector(".settings_bt");
   const drawer = $("settingsDrawer");
   const drawerOverlay = $("drawerOverlay");
 
-  // screens
   const screenHome = $("screen-home");
   const screenTasks = $("screen-tasks");
   const screenChat = $("screen-chat");
   const screenSubscription = $("screen-subscription");
 
-  // nav
   const navBtn = $("navBtn");
   const navBtnText = navBtn?.querySelector("span");
 
-  // chat
   const promptEl = $("prompt");
   const sendBtn = $("sendBtn");
   const chatMessagesEl = $("chatMessages");
   const chatTypingEl = $("chatTyping");
   const planBtn = $("planBtn");
 
-  // header user greeting
   const userEl = $("user");
 
-  // drawer top user
   const drawerName = $("drawerName");
   const drawerPhone = $("drawerPhone");
   const drawerAvatar = $("drawerAvatar");
 
-  // theme mini
   const themeMiniBtn = $("themeMiniBtn");
 
-  // drawer menu
   const menuProfile = $("menuProfile");
   const menuHistory = $("menuHistory");
   const menuSettings = $("menuSettings");
 
-  // history
   const historyList = $("historyList");
   const clearHistoryBtn = $("clearHistory");
 
-  // profile modal
   const profileModal = $("profileModal");
   const profileOverlay = $("profileOverlay");
   const closeProfileBtn = $("closeProfile");
@@ -183,32 +166,31 @@ window.addEventListener("DOMContentLoaded", () => {
   const profileNick = $("profileNick");
   const profileBio = $("profileBio");
 
-  // plan modal
   const planOverlay = $("planOverlay");
   const planModal = $("planModal");
   const planContent = $("planContent");
   const closePlanBtn = $("closePlan");
 
-  // tasks
   const tasksListEl = $("tasksList");
   const clearTasksBtn = $("clearTasks");
 
-  // points bar
   const pointsBar = $("pointsBar");
   const pointsValue = $("pointsValue");
 
-  // attach
   const plusBtn = $("plusBtn");
   const attach = $("attach");
   const attachPanel = attach?.querySelector(".attach__panel");
   const pickPhoto = $("pickPhoto");
   const pickFile = $("pickFile");
 
-  // subscription / upgrade UI
-  const upgradeBtn = document.querySelector(".pass button"); // open sub screen
+  // 🔥 ВАЖНО: кнопка "Обновить план" — ищем надёжно
+  // 1) в блоке .pass
+  // 2) либо по id (если ты захочешь добавить)
+  const upgradeBtn =
+    document.querySelector(".pass button") || $("upgradeBtn");
+
   const subClose = $("subscriptionClose");
   const lsdSubscribeBtn = $("lsdSubscribeBtn");
-  const ctaPrice = $("lsdCtaPrice");
 
   // =========================
   // STATE
@@ -216,23 +198,18 @@ window.addEventListener("DOMContentLoaded", () => {
   let currentScreen = "home";
   let isLoading = false;
 
-  // points (visual progress only)
   let points = Number(sGet(STORAGE_POINTS, "0")) || 0;
 
-  // chats
   let activeChatId = sGet(STORAGE_ACTIVE_CHAT, "");
   let chatsIndex = sJSONGet(STORAGE_CHATS_INDEX, []);
   let chatCache = sJSONGet(STORAGE_CHAT_CACHE, {});
 
-  // tasks
   let tasksState = sJSONGet(STORAGE_TASKS_GROUPS, { groups: [] });
 
-  // sync
   let syncTimer = null;
   let pullTimer = null;
 
-  // subscription selection
-  let selectedPlan = sGet(STORAGE_SUB_PLAN, "month") || "month"; // "month" | "year"
+  let selectedPlan = sGet(STORAGE_SUB_PLAN, "month") || "month"; // month/year
 
   // =========================
   // EMOJI
@@ -243,7 +220,7 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 
   // =========================
-  // NETWORK (timeout + safe json)
+  // NETWORK
   // =========================
   async function postJSON(url, payload, timeoutMs = 20000) {
     const controller = new AbortController();
@@ -313,34 +290,24 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 
   // =========================
-  // PROFILE (local + init in DB)
+  // PROFILE
   // =========================
   function loadProfile() {
     return sJSONGet(STORAGE_PROFILE, { age: "", nick: "", bio: "" });
   }
-
   function saveProfile(p) {
     sJSONSet(STORAGE_PROFILE, p);
   }
 
   async function initUserInDB() {
     const tg_id = getTgIdOrNull();
-    dbg("initUserInDB: tg_id=" + tg_id);
-
-    if (!tg_id) {
-      dbg("❌ Нет tg_id. Открыто НЕ внутри Telegram или нет user в initDataUnsafe.");
-      return;
-    }
+    if (!tg_id) return;
 
     try {
       const profile = loadProfile();
-      dbg("➡️ /api/user/init ...");
-      const { ok, status, data } = await postJSON(`${API_BASE}/api/user/init`, { tg_id, profile });
-      dbg(`⬅️ init ok=${ok} status=${status}`);
+      const { ok, data } = await postJSON(`${API_BASE}/api/user/init`, { tg_id, profile });
       if (!ok) dbg("init error: " + (data?.error || "unknown"));
-    } catch (e) {
-      dbg("❌ Ошибка initUserInDB: " + String(e?.message || e));
-    }
+    } catch {}
   }
 
   // =========================
@@ -349,10 +316,6 @@ window.addEventListener("DOMContentLoaded", () => {
   function syncThemeIcon() {
     if (!themeMiniBtn) return;
     const isDark = document.body.classList.contains("dark");
-
-    const OFFSET_X = 0;
-    const OFFSET_Y = 1;
-
     themeMiniBtn.innerHTML = `
       <span style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;">
         <img
@@ -360,7 +323,7 @@ window.addEventListener("DOMContentLoaded", () => {
           alt="theme"
           width="22"
           height="22"
-          style="transform: translate(${OFFSET_X}px, ${OFFSET_Y}px); ${isDark ? "filter: invert(1);" : ""}"
+          style="${isDark ? "filter: invert(1);" : ""}"
         />
       </span>
     `;
@@ -391,11 +354,10 @@ window.addEventListener("DOMContentLoaded", () => {
   on(drawerOverlay, "click", closeDrawer);
 
   // =========================
-  // SCREEN SWITCH + POINTS VISIBILITY
+  // SCREENS + POINTS VISIBILITY
   // =========================
   function setNavLabel() {
     if (!navBtnText) return;
-    // home <-> tasks toggle как раньше
     navBtnText.textContent = currentScreen === "home" ? "задачи" : "назад";
   }
 
@@ -411,7 +373,6 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 
   function updatePointsVisibility() {
-    // pointsBar должен быть виден ТОЛЬКО на экране задач
     if (!pointsBar) return;
     pointsBar.style.display = currentScreen === "tasks" ? "" : "none";
   }
@@ -445,14 +406,10 @@ window.addEventListener("DOMContentLoaded", () => {
   });
 
   // =========================
-  // POINTS (VISUAL PROGRESS)
+  // POINTS
   // =========================
   function renderPointsBar() {
     if (pointsValue) pointsValue.textContent = String(points || 0);
-    if (pointsBar) {
-      pointsBar.classList.toggle("open", points > 0);
-      pointsBar.setAttribute("aria-hidden", points > 0 ? "false" : "true");
-    }
     updatePointsVisibility();
   }
 
@@ -466,7 +423,6 @@ window.addEventListener("DOMContentLoaded", () => {
   // =========================
   function ensureChat(id) {
     if (!id) return;
-
     if (!chatCache[id]) {
       chatCache[id] = {
         meta: { title: "Новый чат", emoji: pickEmoji(), updatedAt: Date.now() },
@@ -474,17 +430,10 @@ window.addEventListener("DOMContentLoaded", () => {
       };
       return;
     }
-
     if (!chatCache[id].meta) {
       chatCache[id].meta = { title: "Новый чат", emoji: pickEmoji(), updatedAt: Date.now() };
     }
-
-    // fixes older shape
-    if (!Array.isArray(chatCache[id].messages) && Array.isArray(chatCache[id].messages?.messages)) {
-      chatCache[id].messages = chatCache[id].messages.messages;
-    }
     if (!Array.isArray(chatCache[id].messages)) chatCache[id].messages = [];
-
     if (!chatCache[id].meta.updatedAt) chatCache[id].meta.updatedAt = Date.now();
     if (!chatCache[id].meta.emoji) chatCache[id].meta.emoji = pickEmoji();
     if (!chatCache[id].meta.title) chatCache[id].meta.title = "Новый чат";
@@ -622,14 +571,13 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 
   // =========================
-  // RENDER CHATS LIST (drawer)
+  // RENDER CHATS LIST
   // =========================
   function renderChatsInHistory() {
     if (!historyList) return;
 
     historyList.innerHTML = "";
 
-    // new chat row
     const newRow = document.createElement("div");
     newRow.className = "tgChatRow";
     newRow.innerHTML = `
@@ -686,7 +634,7 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 
   // =========================
-  // TASKS (Grouped) + "SUBMIT" => POINTS
+  // TASKS (Grouped)
   // =========================
   function saveTasksState() {
     sJSONSet(STORAGE_TASKS_GROUPS, tasksState);
@@ -695,14 +643,8 @@ window.addEventListener("DOMContentLoaded", () => {
   function energyToLevel(energy) {
     const e = String(energy || "").toLowerCase();
     if (!e) return 2;
-
-    if (e.includes("low") || e.includes("легк") || e.includes("easy")) return 1;
-    if (e.includes("high") || e.includes("тяж") || e.includes("hard")) return 3;
-    if (e.includes("med") || e.includes("сред")) return 2;
-
-    const bolts = (String(energy).match(/⚡/g) || []).length;
-    if (bolts) return clamp(bolts, 1, 3);
-
+    if (e.includes("easy") || e.includes("легк")) return 1;
+    if (e.includes("hard") || e.includes("тяж")) return 3;
     return 2;
   }
 
@@ -725,7 +667,6 @@ window.addEventListener("DOMContentLoaded", () => {
     return { totalMin, avgLevel, doneCount, allDone, itemsCount: items.length };
   }
 
-  // points for group: items + floor(totalMin/30)
   function calcGroupPoints(g) {
     const meta = groupMeta(g);
     const p1 = meta.itemsCount;
@@ -784,7 +725,6 @@ window.addEventListener("DOMContentLoaded", () => {
         renderTasks();
       });
 
-      // submit bar
       if (submitted) {
         const okBar = document.createElement("div");
         okBar.className = "taskSubmitBar done";
@@ -800,55 +740,43 @@ window.addEventListener("DOMContentLoaded", () => {
           if (g.submitted) return;
 
           g.submitted = true;
-
-          // VISUAL POINTS ONLY
           points += groupPoints;
           savePoints();
 
           saveTasksState();
           renderTasks();
           scheduleSyncPush();
-
-          dbg(`🏆 +${groupPoints} очков`);
         });
         body.appendChild(bar);
       }
 
       const items = Array.isArray(g.items) ? g.items : [];
-      if (!items.length) {
-        const empty = document.createElement("div");
-        empty.className = "taskGroupEmpty";
-        empty.textContent = "Пусто…";
-        body.appendChild(empty);
-      } else {
-        items.forEach((t) => {
-          const row = document.createElement("div");
-          row.className = "taskRow" + (t.done ? " done" : "");
+      items.forEach((t) => {
+        const row = document.createElement("div");
+        row.className = "taskRow" + (t.done ? " done" : "");
 
-          row.innerHTML = `
-            <label class="taskRowLeft">
-              <input type="checkbox" ${t.done ? "checked" : ""} />
-              <span class="taskRowText">${escapeHTML(t.text || "")}</span>
-            </label>
-            <div class="taskRowRight">
-              ${Number.isFinite(Number(t.min)) ? `<span class="miniMeta">⏱ ${Number(t.min)}м</span>` : ""}
-              <span class="miniMeta">⚡ ${levelLabel(Number(t.level) || 2)}</span>
-            </div>
-          `;
+        row.innerHTML = `
+          <label class="taskRowLeft">
+            <input type="checkbox" ${t.done ? "checked" : ""} />
+            <span class="taskRowText">${escapeHTML(t.text || "")}</span>
+          </label>
+          <div class="taskRowRight">
+            ${Number.isFinite(Number(t.min)) ? `<span class="miniMeta">⏱ ${Number(t.min)}м</span>` : ""}
+            <span class="miniMeta">⚡ ${levelLabel(Number(t.level) || 2)}</span>
+          </div>
+        `;
 
-          const cb = row.querySelector("input[type='checkbox']");
-          cb.addEventListener("change", () => {
-            t.done = !!cb.checked;
-            if (!t.done) g.submitted = false; // если снял галку — пересдать потом
-
-            saveTasksState();
-            renderTasks();
-            scheduleSyncPush();
-          });
-
-          body.appendChild(row);
+        const cb = row.querySelector("input[type='checkbox']");
+        cb.addEventListener("change", () => {
+          t.done = !!cb.checked;
+          if (!t.done) g.submitted = false;
+          saveTasksState();
+          renderTasks();
+          scheduleSyncPush();
         });
-      }
+
+        body.appendChild(row);
+      });
 
       tasksListEl.appendChild(wrap);
     });
@@ -864,7 +792,7 @@ window.addEventListener("DOMContentLoaded", () => {
   on(clearTasksBtn, "click", clearAllTasks);
 
   // =========================
-  // PLAN MODAL (Accept / Decline)
+  // PLAN MODAL
   // =========================
   function openPlanModal(htmlOrNode) {
     if (!planOverlay || !planModal || !planContent) return;
@@ -903,13 +831,7 @@ window.addEventListener("DOMContentLoaded", () => {
             const min = Number.isFinite(Number(t?.min)) ? Number(t.min) : null;
             const level = energyToLevel(t?.energy);
 
-            return {
-              id: uuid(),
-              text,
-              min,
-              level,
-              done: false,
-            };
+            return { id: uuid(), text, min, level, done: false };
           })
           .filter(Boolean);
 
@@ -972,7 +894,6 @@ window.addEventListener("DOMContentLoaded", () => {
       `;
 
       const body = card.querySelector(".planCardBody");
-
       g.items.forEach((t) => {
         const row = document.createElement("div");
         row.className = "planTaskRow";
@@ -992,20 +913,15 @@ window.addEventListener("DOMContentLoaded", () => {
       acceptBtn.addEventListener("click", () => {
         addGroupToTasks(g);
         card.remove();
-
-        const left = wrap.querySelectorAll(".planCard").length;
-        dbg("✅ План принят: " + g.title);
-        if (!left) {
+        if (!wrap.querySelector(".planCard")) {
           closePlanModal();
           switchScreen("tasks");
         }
       });
 
       declineBtn.addEventListener("click", () => {
-        dbg("⛔ План отклонён: " + g.title);
         card.remove();
-        const left = wrap.querySelectorAll(".planCard").length;
-        if (!left) closePlanModal();
+        if (!wrap.querySelector(".planCard")) closePlanModal();
       });
 
       wrap.appendChild(card);
@@ -1021,13 +937,10 @@ window.addEventListener("DOMContentLoaded", () => {
     if (isLoading) return;
 
     const tg_id = getTgIdOrNull();
-    if (!tg_id) {
-      dbg("❌ Открой внутри Telegram (нет tg_id)");
-      return;
-    }
+    if (!tg_id) return tgPopup("Открой мини-апп внутри Telegram.");
 
     if (getMessages().length < 2) {
-      dbg("🙂 Мало переписки для плана");
+      tgPopup("Мало переписки для плана 🙂");
       return;
     }
 
@@ -1035,8 +948,6 @@ window.addEventListener("DOMContentLoaded", () => {
     if (planBtn) planBtn.disabled = true;
 
     try {
-      dbg("Создаю план…");
-
       const profile = loadProfile();
       const { ok, status, data } = await postJSON(`${API_BASE}/api/plan/create`, {
         tg_id,
@@ -1045,7 +956,6 @@ window.addEventListener("DOMContentLoaded", () => {
       });
 
       if (!ok) {
-        dbg("❌ Ошибка плана: " + (data?.error || `status_${status}`));
         openPlanModal(`<div class="planError">Ошибка: ${escapeHTML(data?.error || `status_${status}`)}</div>`);
         return;
       }
@@ -1054,15 +964,12 @@ window.addEventListener("DOMContentLoaded", () => {
       const normalized = normalizeCards(cards);
 
       if (!normalized.length) {
-        dbg("🙂 План пустой (0 карточек)");
         openPlanModal(`<div class="planEmpty">План пустой. Напиши больше деталей 🙂</div>`);
         return;
       }
 
       openPlanModal(renderPlanForAccept(normalized));
-    } catch (e) {
-      console.log("PLAN ERROR:", e);
-      dbg("❌ Не удалось подключиться к серверу");
+    } catch {
       openPlanModal(`<div class="planError">Не удалось подключиться к серверу.</div>`);
     } finally {
       isLoading = false;
@@ -1071,7 +978,7 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 
   // =========================
-  // SEND MESSAGE (text)
+  // SEND MESSAGE
   // =========================
   async function sendMessage() {
     if (isLoading) return;
@@ -1096,14 +1003,13 @@ window.addEventListener("DOMContentLoaded", () => {
     try {
       const profile = loadProfile();
       const last = getMessages().slice(-1)[0];
-      const msg_id = last?.msg_id;
 
       const { ok, status, data } = await postJSON(`${API_BASE}/api/chat/send`, {
         tg_id,
         chat_id: activeChatId,
         text,
         profile,
-        msg_id,
+        msg_id: last?.msg_id || uuid(),
       });
 
       if (!ok) {
@@ -1112,8 +1018,7 @@ window.addEventListener("DOMContentLoaded", () => {
       }
 
       pushMsg("ai", String(data?.text || "").trim() || "AI вернул пустой ответ 😶");
-    } catch (e) {
-      console.log("SEND ERROR:", e);
+    } catch {
       pushMsg("ai", "Не удалось подключиться к серверу.");
     } finally {
       isLoading = false;
@@ -1147,9 +1052,7 @@ window.addEventListener("DOMContentLoaded", () => {
     toggleAttach();
   });
 
-  // click overlay closes
   attach?.addEventListener("click", () => closeAttach());
-  // click panel doesn't close
   attachPanel?.addEventListener("click", (e) => e.stopPropagation());
 
   document.addEventListener("keydown", (e) => {
@@ -1176,19 +1079,17 @@ window.addEventListener("DOMContentLoaded", () => {
     if (isLoading) return;
 
     const tg_id = getTgIdOrNull();
-    if (!tg_id) {
-      pushMsg("ai", "Открой мини-апп внутри Telegram, иначе tg_id не приходит.");
-      return;
-    }
+    if (!tg_id) return tgPopup("Открой мини-апп внутри Telegram.");
 
     switchScreen("chat");
+
     const label = kind === "photo" ? `📷 Фото: ${file.name}` : `📎 Файл: ${file.name}`;
     pushMsg("user", label);
 
     const fd = new FormData();
     fd.append("tg_id", String(tg_id));
     fd.append("chat_id", String(activeChatId));
-    fd.append("kind", kind); // "photo" | "file"
+    fd.append("kind", kind);
     fd.append("file", file);
     fd.append("profile", JSON.stringify(loadProfile() || {}));
 
@@ -1200,23 +1101,12 @@ window.addEventListener("DOMContentLoaded", () => {
       const { ok, status, data } = await postForm(`${API_BASE}/api/chat/attach`, fd);
 
       if (!ok) {
-        pushMsg(
-          "ai",
-          "Ошибка сервера: " +
-            (data?.error || `status_${status}`) +
-            (data?.details ? ` (${data.details})` : "")
-        );
+        pushMsg("ai", "Ошибка сервера: " + (data?.error || `status_${status}`));
         return;
       }
 
-      // если сервер вернул points — обновим (points всё ещё визуальные, просто синхроним)
-      if (Number.isFinite(Number(data?.points))) {
-        points = Number(data.points);
-        savePoints();
-      }
-
       pushMsg("ai", String(data?.text || "").trim() || "AI вернул пустой ответ 😶");
-    } catch (e) {
+    } catch {
       pushMsg("ai", "Не удалось подключиться к серверу.");
     } finally {
       isLoading = false;
@@ -1226,108 +1116,68 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 
   // =========================
-  // SUBSCRIPTION WINDOW + CTA (UI only)
+  // SUBSCRIPTION SCREEN (OPEN/CLOSE) — FIXED
   // =========================
   function openSubscription() {
-    // если у тебя окно отдельным экраном — переключаем
-    if (screenSubscription) {
-      switchScreen("subscription");
-      document.body.style.overflow = "hidden";
+    if (!screenSubscription) {
+      tgPopup("Не найден #screen-subscription в HTML.");
       return;
     }
-
-    // fallback: если это модалка
-    const subWin = $("screen-subscription");
-    if (!subWin) return;
-    subWin.classList.add("open");
-    subWin.setAttribute("aria-hidden", "false");
-    document.body.style.overflow = "hidden";
+    switchScreen("subscription");
+    screenSubscription.setAttribute("aria-hidden", "false");
   }
 
   function closeSubscription() {
-    if (screenSubscription) {
-      // возвращаем назад на home
-      switchScreen("home");
-      document.body.style.overflow = "";
-      return;
-    }
-
-    const subWin = $("screen-subscription");
-    if (!subWin) return;
-    subWin.classList.remove("open");
-    subWin.setAttribute("aria-hidden", "true");
-    document.body.style.overflow = "";
+    if (!screenSubscription) return;
+    screenSubscription.setAttribute("aria-hidden", "true");
+    switchScreen("home");
   }
 
-  upgradeBtn?.addEventListener("click", openSubscription);
-  subClose?.addEventListener("click", closeSubscription);
-
-  function setCTA(plan) {
-    selectedPlan = plan === "year" ? "year" : "month";
-    sSet(STORAGE_SUB_PLAN, selectedPlan);
-
-    // UI price only
-    if (selectedPlan === "year") {
-      if (ctaPrice) ctaPrice.textContent = "13 490 ₸";
-      if (lsdSubscribeBtn) lsdSubscribeBtn.innerHTML = `Подключить за <span id="lsdCtaPrice">13 490 ₸</span> в год`;
-    } else {
-      if (ctaPrice) ctaPrice.textContent = "1 790 ₸";
-      if (lsdSubscribeBtn) lsdSubscribeBtn.innerHTML = `Подключить за <span id="lsdCtaPrice">1 790 ₸</span> в месяц`;
-    }
+  // 🔥 ФИКС: кнопка "Обновить план" должна открывать subscription
+  if (upgradeBtn) {
+    upgradeBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      openSubscription();
+    });
+  } else {
+    dbg("⚠️ upgradeBtn not found (.pass button / #upgradeBtn)");
   }
 
-  // apply persisted plan on boot
-  setCTA(selectedPlan);
-
-  // react to radio changes
-const subWin = document.getElementById("screen-subscription");
-
-function openSubscription() {
-  if (!subWin) return;
-  subWin.classList.add("open");
-  subWin.setAttribute("aria-hidden", "false");
-  document.body.style.overflow = "hidden";
-}
-
-function closeSubscription() {
-  if (!subWin) return;
-  subWin.classList.remove("open");
-  subWin.setAttribute("aria-hidden", "true");
-  document.body.style.overflow = "";
-}
-
-document.addEventListener("DOMContentLoaded", () => {
-  const upgradeBtn = document.querySelector(".pass button");
-  const subClose = document.getElementById("subscriptionClose");
-
-  upgradeBtn?.addEventListener("click", openSubscription);
-  subClose?.addEventListener("click", closeSubscription);
-});
-
+  on(subClose, "click", (e) => {
+    e.preventDefault();
+    closeSubscription();
+  });
 
   // =========================
-  // PURCHASE: lsdSubscribeBtn (REAL PRICE, NOT POINTS)
+  // SUBSCRIPTION: plan selection (month/year)
+  // =========================
+  function setSelectedPlan(plan) {
+    selectedPlan = plan === "year" ? "year" : "month";
+    sSet(STORAGE_SUB_PLAN, selectedPlan);
+  }
+  setSelectedPlan(selectedPlan);
+
+  screenSubscription?.addEventListener("change", (e) => {
+    if (!(e.target instanceof HTMLInputElement)) return;
+    if (e.target.name !== "lsd_plan") return;
+    setSelectedPlan(e.target.value);
+  });
+
+  // =========================
+  // PURCHASE (Telegram Stars) — FIXED FOR SERVER invoice OBJECT
   // =========================
   async function purchaseSubscription() {
     const tg_id = getTgIdOrNull();
-    if (!tg_id) {
-      tgPopup("Открой мини-апп внутри Telegram, иначе покупка не работает.");
-      return;
-    }
+    if (!tg_id) return tgPopup("Открой мини-апп внутри Telegram.");
 
-    // Важно: points НЕ участвуют.
-    // Тут только invoice/оплата.
     if (!tg?.openInvoice) {
-      tgPopup("Оплата доступна только внутри Telegram клиента (openInvoice недоступен).");
-      return;
+      return tgPopup("Оплата доступна только внутри Telegram клиента (openInvoice недоступен).");
     }
 
     try {
       if (lsdSubscribeBtn) lsdSubscribeBtn.disabled = true;
-      dbg("➡️ creating invoice...");
 
-      // сервер должен вернуть { invoice: "<invoiceLinkOrPayload>" }
-      // план отправляем как "month" | "year"
       const { ok, status, data } = await postJSON(`${API_BASE}/api/subscription/invoice`, {
         tg_id,
         plan: selectedPlan,
@@ -1339,22 +1189,17 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       const invoice = data?.invoice;
-      if (!invoice) {
-        tgPopup("Сервер не вернул invoice.");
+      if (!invoice || typeof invoice !== "object") {
+        tgPopup("Сервер вернул неправильный invoice.");
         return;
       }
 
-      tg.openInvoice(invoice, async (status) => {
-        // status может быть: "paid" | "cancelled" | "failed"
-        dbg("invoice status: " + status);
-
+      // ⭐ Telegram Stars: в WebApp openInvoice можно передать invoice object
+      tg.openInvoice(invoice, (status) => {
         if (status === "paid") {
-          tgPopup("Подписка активирована ✅");
+          tgPopup("Оплата прошла ✅");
           closeSubscription();
-
-          // если у тебя есть подтверждение на сервере — дерни
-          // (можешь убрать, если сервер сам всё подтверждает по webhook)
-          await postJSON(`${API_BASE}/api/subscription/confirm`, { tg_id }).catch(() => {});
+          // Подтверждение/активация подписки будет через webhook на сервере (следующий шаг)
         } else if (status === "cancelled") {
           tgPopup("Оплата отменена.");
         } else {
@@ -1421,7 +1266,7 @@ document.addEventListener("DOMContentLoaded", () => {
       chats_upsert,
       messages_upsert,
       tasks_state: tasksState,
-      points, // points = visual progress only
+      points,
     });
   }
 
@@ -1432,7 +1277,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const { ok, data } = await postJSON(`${API_BASE}/api/sync/pull`, { tg_id });
     if (!ok) return;
 
-    // chats
     if (Array.isArray(data?.chats)) {
       data.chats.forEach((c) => {
         const id = c.chat_id;
@@ -1450,7 +1294,6 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     }
 
-    // messages
     if (Array.isArray(data?.messages)) {
       const byChat = new Map();
 
@@ -1484,26 +1327,21 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     }
 
-    // tasks_state
     if (data?.tasks_state && typeof data.tasks_state === "object") {
       tasksState = data.tasks_state;
       saveTasksState();
     }
 
-    // points
     if (Number.isFinite(Number(data?.points))) {
       points = Number(data.points);
       savePoints();
     }
 
-    // order chats by freshness
     chatsIndex = chatsIndex
       .filter((id) => chatCache[id])
       .sort((a, b) => (chatCache[b].meta.updatedAt || 0) - (chatCache[a].meta.updatedAt || 0));
 
-    if (!activeChatId || !chatCache[activeChatId]) {
-      activeChatId = chatsIndex[0] || activeChatId;
-    }
+    if (!activeChatId || !chatCache[activeChatId]) activeChatId = chatsIndex[0] || activeChatId;
 
     saveChats();
     renderTasks();
@@ -1544,12 +1382,6 @@ document.addEventListener("DOMContentLoaded", () => {
     closeDrawer();
     openProfile();
   });
-
-  on(menuHistory, "click", () => {
-    historyList?.scrollTo({ top: 0, behavior: "smooth" });
-  });
-
-  on(menuSettings, "click", () => {});
 
   on(clearHistoryBtn, "click", () => {
     resetAllChats();
@@ -1596,7 +1428,6 @@ document.addEventListener("DOMContentLoaded", () => {
   // =========================
   // BOOT
   // =========================
-  // ensure initial chat
   if (!activeChatId) {
     if (Array.isArray(chatsIndex) && chatsIndex.length) activeChatId = chatsIndex[0];
     else {
@@ -1620,9 +1451,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   switchScreen("home");
 
-  
-
-  // Telegram greeting + init DB
   if (tg) {
     try {
       tg.ready();
@@ -1636,7 +1464,6 @@ document.addEventListener("DOMContentLoaded", () => {
     if (userEl) userEl.textContent = "Открой внутри Telegram WebApp 🙂";
   }
 
-  // pull now + periodic
   syncPull();
   clearInterval(pullTimer);
   pullTimer = setInterval(syncPull, 30000);
