@@ -1459,6 +1459,42 @@ tg.openInvoice(invoiceUrl, (status) => {
 
   on(planBtn, "click", createPlan);
 
+  const LONG_PRESS_DELAY = 500; // мс
+let pressTimer = null;
+
+document.querySelectorAll(".msg .ai").forEach((msg) => {
+  msg.addEventListener("touchstart", () => {
+    pressTimer = setTimeout(() => {
+      openShare(msg.dataset.text);
+    }, LONG_PRESS_DELAY);
+  });
+
+  msg.addEventListener("touchend", () => {
+    clearTimeout(pressTimer);
+  });
+
+  msg.addEventListener("touchmove", () => {
+    clearTimeout(pressTimer);
+  });
+
+  // Для ПК
+  msg.addEventListener("contextmenu", (e) => {
+    e.preventDefault();
+    openShare(msg.dataset.text);
+  });
+});
+
+function openShare(text) {
+  if (!window.Telegram?.WebApp) return;
+
+  const encoded = encodeURIComponent(text);
+
+  Telegram.WebApp.openTelegramLink(
+    `https://t.me/share/url?text=${encoded}`
+  );
+}
+
+
   // =========================
   // BOOT
   // =========================
@@ -1498,6 +1534,7 @@ tg.openInvoice(invoiceUrl, (status) => {
     if (userEl) userEl.textContent = "Открой внутри Telegram WebApp 🙂";
   }
 
+  
   syncPull();
   clearInterval(pullTimer);
   pullTimer = setInterval(syncPull, 30000);

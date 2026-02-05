@@ -1049,6 +1049,7 @@ body::before{
    TASK GROUPS (оглавление + подзадачи)
 ================================= */
 .taskGroup{
+  width: 73%;
   list-style:none;
   padding:0;
   margin:0 0 10px;
@@ -2173,4 +2174,37 @@ main{
   overflow-y: auto;              /* ВОТ ОНО */
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
+}
+
+/* ===============================
+   TASKS: scroll внутри списка
+   =============================== */
+
+/* экран задач: пусть сам не режет */
+#screen-tasks{
+  overflow: hidden;          /* важно: чтобы скролл был только внутри списка */
+}
+
+/* карточка задач — фикс высоты */
+.tasksBox{
+  display: flex;
+  flex-direction: column;
+  min-height: 0;             /* критично для скролла во flex */
+}
+
+/* список задач становится scroll-area */
+.tasksList{
+  flex: 1 1 auto;
+  min-height: 0;             /* критично: иначе scroll не включится */
+  max-height: calc(100vh - 56px - 86px - 24px - 90px);
+  /* 56 header, 86 footer, 24 отступы, 90 запас под points/header */
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding-right: 6px;        /* чтоб скролл не лип к тексту */
+}
+
+/* подсказку вниз, чтобы не мешала списку */
+.tasksHint{
+  margin-top: 10px;
 }
