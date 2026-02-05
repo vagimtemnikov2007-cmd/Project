@@ -554,32 +554,33 @@ function updateSubscriptionUI() {
     createNewChat();
   }
 
-  function pushMsg(who, text) {
-    if (!activeChatId) createNewChat();
+function pushMsg(who, text, opts = {}) {
+  if (!activeChatId) createNewChat();
 
-    const c = getActiveChat();
-    const msg = {
-      msg_id: uuid(),
-      who, // "user" | "ai"
-      text: String(text ?? ""),
-      ts: Date.now(),
-    };
+  const c = getActiveChat();
+  const msg = {
+    msg_id: opts.msg_id || uuid(),
+    who, // "user" | "ai"
+    text: String(text ?? ""),
+    ts: opts.ts ?? Date.now(),
+  };
 
-    c.messages.push(msg);
-    c.meta.updatedAt = Date.now();
+  c.messages.push(msg);
+  c.meta.updatedAt = Date.now();
 
-    if (c.meta.title === "Новый чат" && who === "user") {
-      c.meta.title = makeChatTitleFromText(text);
-    }
-
-    bumpChatToTop(activeChatId);
-    saveChats();
-
-    renderMessages();
-    renderChatsInHistory();
-
-    scheduleSyncPush();
+  if (c.meta.title === "Новый чат" && who === "user") {
+    c.meta.title = makeChatTitleFromText(text);
   }
+
+  bumpChatToTop(activeChatId);
+  saveChats();
+
+  renderMessages();
+  renderChatsInHistory();
+
+  scheduleSyncPush();
+  return msg; // полезно
+}
 
   // =========================
   // RENDER MESSAGES
@@ -1011,51 +1012,57 @@ function updateSubscriptionUI() {
   // SEND MESSAGE
   // =========================
   async function sendMessage() {
-    if (isLoading) return;
+  if (isLoading) return;
 
-    const text = (promptEl?.value || "").trim();
-    if (!text) return;
+  const text = (promptEl?.value || "").trim();
+  if (!text) return;
 
-    switchScreen("chat");
-    pushMsg("user", text);
-    if (promptEl) promptEl.value = "";
+  switchScreen("chat");
 
-    const tg_id = getTgIdOrNull();
-    if (!tg_id) {
-      pushMsg("ai", "Открой мини-апп внутри Telegram, иначе tg_id не приходит.");
+  const clientUserMsgId = uuid();
+  pushMsg("user", text, { msg_id: clientUserMsgId });
+
+  if (promptEl) promptEl.value = "";
+
+  const tg_id = getTgIdOrNull();
+  if (!tg_id) {
+    pushMsg("ai", "Открой мини-апп внутри Telegram, иначе tg_id не приходит.");
+    return;
+  }
+
+  isLoading = true;
+  if (sendBtn) sendBtn.disabled = true;
+  if (chatTypingEl) chatTypingEl.hidden = false;
+
+  try {
+    const profile = loadProfile();
+
+    const { ok, status, data } = await postJSON(`${API_BASE}/api/chat/send`, {
+      tg_id,
+      chat_id: activeChatId,
+      text,
+      profile,
+      msg_id: clientUserMsgId, // ← ВАЖНО: отправляем тот же msg_id
+    });
+
+    if (!ok) {
+      pushMsg("ai", "Ошибка сервера: " + (data?.error || `status_${status}`));
       return;
     }
 
-    isLoading = true;
-    if (sendBtn) sendBtn.disabled = true;
-    if (chatTypingEl) chatTypingEl.hidden = false;
+    // AI сообщение добавляем с msg_id от сервера (или fallback)
+    const aiId = data?.ai_msg_id || uuid();
+    pushMsg("ai", String(data?.text || "").trim() || "AI вернул пустой ответ 😶", { msg_id: aiId });
 
-    try {
-      const profile = loadProfile();
-      const last = getMessages().slice(-1)[0];
-
-      const { ok, status, data } = await postJSON(`${API_BASE}/api/chat/send`, {
-        tg_id,
-        chat_id: activeChatId,
-        text,
-        profile,
-        msg_id: last?.msg_id || uuid(),
-      });
-
-      if (!ok) {
-        pushMsg("ai", "Ошибка сервера: " + (data?.error || `status_${status}`));
-        return;
-      }
-
-      pushMsg("ai", String(data?.text || "").trim() || "AI вернул пустой ответ 😶");
-    } catch {
-      pushMsg("ai", "Не удалось подключиться к серверу.");
-    } finally {
-      isLoading = false;
-      if (sendBtn) sendBtn.disabled = false;
-      if (chatTypingEl) chatTypingEl.hidden = true;
-    }
+  } catch {
+    pushMsg("ai", "Не удалось подключиться к серверу.");
+  } finally {
+    isLoading = false;
+    if (sendBtn) sendBtn.disabled = false;
+    if (chatTypingEl) chatTypingEl.hidden = true;
   }
+}
+
 
   // =========================
   // ATTACHMENTS
@@ -1106,44 +1113,49 @@ function updateSubscriptionUI() {
   });
 
   async function sendAttachment({ file, kind }) {
-    if (isLoading) return;
+  if (isLoading) return;
 
-    const tg_id = getTgIdOrNull();
-    if (!tg_id) return tgPopup("Открой мини-апп внутри Telegram.");
+  const tg_id = getTgIdOrNull();
+  if (!tg_id) return tgPopup("Открой мини-апп внутри Telegram.");
 
-    switchScreen("chat");
+  switchScreen("chat");
 
-    const label = kind === "photo" ? `📷 Фото: ${file.name}` : `📎 Файл: ${file.name}`;
-    pushMsg("user", label);
+  const clientUserMsgId = uuid();
+  const label = kind === "photo" ? `📷 Фото: ${file.name}` : `📎 Файл: ${file.name}`;
+  pushMsg("user", label, { msg_id: clientUserMsgId });
 
-    const fd = new FormData();
-    fd.append("tg_id", String(tg_id));
-    fd.append("chat_id", String(activeChatId));
-    fd.append("kind", kind);
-    fd.append("file", file);
-    fd.append("profile", JSON.stringify(loadProfile() || {}));
+  const fd = new FormData();
+  fd.append("tg_id", String(tg_id));
+  fd.append("chat_id", String(activeChatId));
+  fd.append("kind", kind);
+  fd.append("file", file);
+  fd.append("profile", JSON.stringify(loadProfile() || {}));
+  fd.append("msg_id", clientUserMsgId); // ← ВАЖНО
 
-    isLoading = true;
-    if (sendBtn) sendBtn.disabled = true;
-    if (chatTypingEl) chatTypingEl.hidden = false;
+  isLoading = true;
+  if (sendBtn) sendBtn.disabled = true;
+  if (chatTypingEl) chatTypingEl.hidden = false;
 
-    try {
-      const { ok, status, data } = await postForm(`${API_BASE}/api/chat/attach`, fd);
+  try {
+    const { ok, status, data } = await postForm(`${API_BASE}/api/chat/attach`, fd);
 
-      if (!ok) {
-        pushMsg("ai", "Ошибка сервера: " + (data?.error || `status_${status}`));
-        return;
-      }
-
-      pushMsg("ai", String(data?.text || "").trim() || "AI вернул пустой ответ 😶");
-    } catch {
-      pushMsg("ai", "Не удалось подключиться к серверу.");
-    } finally {
-      isLoading = false;
-      if (sendBtn) sendBtn.disabled = false;
-      if (chatTypingEl) chatTypingEl.hidden = true;
+    if (!ok) {
+      pushMsg("ai", "Ошибка сервера: " + (data?.error || `status_${status}`));
+      return;
     }
+
+    const aiId = data?.ai_msg_id || uuid();
+    pushMsg("ai", String(data?.text || "").trim() || "AI вернул пустой ответ 😶", { msg_id: aiId });
+
+  } catch {
+    pushMsg("ai", "Не удалось подключиться к серверу.");
+  } finally {
+    isLoading = false;
+    if (sendBtn) sendBtn.disabled = false;
+    if (chatTypingEl) chatTypingEl.hidden = true;
   }
+}
+
 
   // =========================
   // SUBSCRIPTION SCREEN (OPEN/CLOSE) — FIXED
@@ -1459,40 +1471,61 @@ tg.openInvoice(invoiceUrl, (status) => {
 
   on(planBtn, "click", createPlan);
 
-  const LONG_PRESS_DELAY = 500; // мс
 let pressTimer = null;
 
-document.querySelectorAll(".msg .ai").forEach((msg) => {
-  msg.addEventListener("touchstart", () => {
-    pressTimer = setTimeout(() => {
-      openShare(msg.dataset.text);
-    }, LONG_PRESS_DELAY);
-  });
+function getAiMsgTextFromTarget(target) {
+  const el = target?.closest?.(".msg.ai");
+  if (!el) return null;
+  return el.textContent || "";
+}
 
-  msg.addEventListener("touchend", () => {
-    clearTimeout(pressTimer);
-  });
+function showShareMenu(text) {
+  if (!tg?.showPopup) return;
 
-  msg.addEventListener("touchmove", () => {
-    clearTimeout(pressTimer);
-  });
+  tg.showPopup({
+    title: "Сообщение",
+    message: "Отправить ответ в Telegram?",
+    buttons: [
+      { id: "share", type: "default", text: "Отправить" },
+      { id: "cancel", type: "cancel" },
+    ],
+  }, (btnId) => {
+    if (btnId !== "share") return;
 
-  // Для ПК
-  msg.addEventListener("contextmenu", (e) => {
-    e.preventDefault();
-    openShare(msg.dataset.text);
+    // ВАЖНО: замени на своего бота
+    const appLink = "https://t.me/ТВОЙ_БОТ?startapp=from_share";
+
+    const full =
+`🤖 Ответ LSD AI:
+
+${text}
+
+👉 Открыть LSD:
+${appLink}`;
+
+    tg.openTelegramLink(`https://t.me/share/url?text=${encodeURIComponent(full)}`);
   });
+}
+
+chatMessagesEl?.addEventListener("pointerdown", (e) => {
+  const text = getAiMsgTextFromTarget(e.target);
+  if (!text) return;
+
+  e.preventDefault();
+  pressTimer = setTimeout(() => showShareMenu(text), 450);
+}, { passive: false });
+
+chatMessagesEl?.addEventListener("pointerup", () => clearTimeout(pressTimer));
+chatMessagesEl?.addEventListener("pointercancel", () => clearTimeout(pressTimer));
+chatMessagesEl?.addEventListener("pointermove", () => clearTimeout(pressTimer));
+
+chatMessagesEl?.addEventListener("contextmenu", (e) => {
+  const text = getAiMsgTextFromTarget(e.target);
+  if (!text) return;
+  e.preventDefault();
+  showShareMenu(text);
 });
 
-function openShare(text) {
-  if (!window.Telegram?.WebApp) return;
-
-  const encoded = encodeURIComponent(text);
-
-  Telegram.WebApp.openTelegramLink(
-    `https://t.me/share/url?text=${encoded}`
-  );
-}
 
 
   // =========================
