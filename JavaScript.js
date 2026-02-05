@@ -1473,46 +1473,41 @@ tg.openInvoice(invoiceUrl, (status) => {
 
 let pressTimer = null;
 
-function getAiMsgTextFromTarget(target) {
-  const el = target?.closest?.(".msg.ai");
-  if (!el) return null;
-  return el.textContent || "";
-}
+function shareTextToTelegram(text) {
+  const t = String(text || "").trim();
+  if (!t) return;
 
-function showShareMenu(text) {
-  if (!tg?.showPopup) return;
+  // ЗАМЕНИ НА СВОЙ ЮЗЕРНЕЙМ БОТА
+  const appLink = "https://t.me/ТВОЙ_БОТ?startapp=from_share";
 
-  tg.showPopup({
-    title: "Сообщение",
-    message: "Отправить ответ в Telegram?",
-    buttons: [
-      { id: "share", type: "default", text: "Отправить" },
-      { id: "cancel", type: "cancel" },
-    ],
-  }, (btnId) => {
-    if (btnId !== "share") return;
-
-    // ВАЖНО: замени на своего бота
-    const appLink = "https://t.me/ТВОЙ_БОТ?startapp=from_share";
-
-    const full =
+  const full =
 `🤖 Ответ LSD AI:
 
-${text}
+${t}
 
 👉 Открыть LSD:
 ${appLink}`;
 
-    tg.openTelegramLink(`https://t.me/share/url?text=${encodeURIComponent(full)}`);
-  });
+  // haptic если есть
+  try { tg?.HapticFeedback?.impactOccurred?.("medium"); } catch {}
+
+  // ВАЖНО: используем tg.openTelegramLink
+  tg?.openTelegramLink?.(
+    `https://t.me/share/url?text=${encodeURIComponent(full)}`
+  );
 }
 
+// Делегирование: работает даже после renderMessages()
 chatMessagesEl?.addEventListener("pointerdown", (e) => {
-  const text = getAiMsgTextFromTarget(e.target);
-  if (!text) return;
+  const el = e.target?.closest?.(".msg.ai");
+  if (!el) return;
 
+  // не даём открыть системное меню
   e.preventDefault();
-  pressTimer = setTimeout(() => showShareMenu(text), 450);
+
+  pressTimer = setTimeout(() => {
+    shareTextToTelegram(el.textContent || "");
+  }, 450);
 }, { passive: false });
 
 chatMessagesEl?.addEventListener("pointerup", () => clearTimeout(pressTimer));
@@ -1520,11 +1515,12 @@ chatMessagesEl?.addEventListener("pointercancel", () => clearTimeout(pressTimer)
 chatMessagesEl?.addEventListener("pointermove", () => clearTimeout(pressTimer));
 
 chatMessagesEl?.addEventListener("contextmenu", (e) => {
-  const text = getAiMsgTextFromTarget(e.target);
-  if (!text) return;
+  const el = e.target?.closest?.(".msg.ai");
+  if (!el) return;
   e.preventDefault();
-  showShareMenu(text);
+  shareTextToTelegram(el.textContent || "");
 });
+
 
 
 
