@@ -2208,3 +2208,1111 @@ main{
 .tasksHint{
   margin-top: 10px;
 }
+
+/* ===============================
+   ERROR HANDLING STYLES
+================================= */
+
+.errorOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  animation: fadeIn 0.2s ease;
+}
+
+.errorModal {
+  background: var(--card);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  max-width: 400px;
+  width: 90%;
+  overflow: hidden;
+  animation: slideUp 0.3s ease;
+}
+
+.errorHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  border-bottom: 1px solid var(--divider);
+}
+
+.errorTitle {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 900;
+  color: var(--text);
+}
+
+.errorClose {
+  background: transparent;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: var(--text);
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.errorClose:hover {
+  opacity: 1;
+}
+
+.errorBody {
+  padding: 16px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.errorMessage {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text);
+  line-height: 1.5;
+}
+
+.errorActions {
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--divider);
+}
+
+.errorBtn {
+  flex: 1;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.errorBtnRetry {
+  background: var(--accent);
+  color: white;
+}
+
+.errorBtnRetry:active {
+  transform: scale(0.98);
+  opacity: 0.9;
+}
+
+.errorBtnClose {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.errorBtnClose:active {
+  transform: scale(0.98);
+  opacity: 0.9;
+}
+
+/* ===============================
+   TOAST NOTIFICATIONS
+================================= */
+
+.toast {
+  position: fixed;
+  bottom: -100px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--card);
+  color: var(--text);
+  padding: 12px 16px;
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  z-index: 1500;
+  transition: bottom 0.3s ease;
+  max-width: 80%;
+  text-align: center;
+  font-size: 14px;
+}
+
+.toast.show {
+  bottom: 20px;
+}
+
+/* ===============================
+   LOADING SPINNER
+================================= */
+
+.loadingSpinner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1999;
+}
+
+.spinnerOuter {
+  text-align: center;
+}
+
+.spinnerSvg {
+  width: 50px;
+  height: 50px;
+  color: var(--accent);
+  animation: spin 1s linear infinite;
+}
+
+.spinnerText {
+  margin-top: 12px;
+  color: var(--text);
+  font-size: 14px;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ===============================
+   OFFLINE BANNER
+================================= */
+
+.offlineBanner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: #ff6b6b;
+  color: white;
+  padding: 8px 16px;
+  font-size: 13px;
+  z-index: 1800;
+  animation: slideDown 0.3s ease;
+}
+
+.offlineContent {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.offlineIcon {
+  font-size: 16px;
+}
+
+.offlineText {
+  margin: 0;
+  flex: 1;
+}
+
+@keyframes slideDown {
+  from {
+    transform: translateY(-100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+/* ===============================
+   UPDATE BANNER
+================================= */
+
+.updateBanner {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  right: 20px;
+  background: var(--accent);
+  color: white;
+  padding: 12px 16px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  box-shadow: var(--shadow);
+  z-index: 1700;
+  animation: slideUp 0.3s ease;
+}
+
+.updateBanner p {
+  margin: 0;
+  font-size: 14px;
+  flex: 1;
+}
+
+.updateBanner button {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.updateBanner button:active {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* ===============================
+   ANIMATIONS
+================================= */
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* ===============================
+   LOADING STATE
+================================= */
+
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+  gap: 12px;
+}
+
+.loading-state .spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--surface-2);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.loading-state p {
+  margin: 0;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+/* ===============================
+   SUGGESTIONS
+================================= */
+
+.suggestions-container {
+  position: absolute;
+  bottom: 100%;
+  left: 8px;
+  right: 8px;
+  background: var(--card);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  max-height: 150px;
+  overflow-y: auto;
+  z-index: 1000;
+}
+
+.suggestion {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--divider);
+  cursor: pointer;
+  transition: background 0.2s;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.suggestion:last-child {
+  border-bottom: none;
+}
+
+.suggestion:hover {
+  background: var(--surface-2);
+}
+
+.suggestion:active {
+  background: var(--divider);
+}
+
+/* ===============================
+   NAV BADGE
+================================= */
+
+.nav-badge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background: #ff6b6b;
+  color: white;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+/* ===============================
+   TRANSITION HELPER
+================================= */
+
+.transition-all {
+  transition: all 0.2s ease;
+}
+
+/* ===== TASKS TOP SECTION & PROGRESS ===== */
+
+.tasksTopSection {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+  background: var(--surface-2);
+  border-radius: 8px;
+  margin: 12px;
+  margin-bottom: 0;
+}
+
+.pointsBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--card);
+  padding: 12px 16px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.pointsLeft {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cup {
+  font-size: 28px;
+  animation: bounce 2s infinite;
+}
+
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+.pointsTitle {
+  font-size: 12px;
+  opacity: 0.7;
+  margin: 0;
+}
+
+.pointsValue {
+  font-size: 20px;
+  font-weight: 900;
+  color: var(--accent);
+  margin: 0;
+}
+
+/* ===== PROGRESS WIDGET ===== */
+
+.progressWidget {
+  background: linear-gradient(135deg, rgba(53, 166, 211, 0.08), rgba(53, 166, 211, 0.02));
+  border: 1px solid var(--accent);
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 4px 16px rgba(53, 166, 211, 0.12);
+}
+
+.progressHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  gap: 8px;
+}
+
+.progressHeader h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.progressEmoji {
+  font-size: 24px;
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-4px); }
+}
+
+.progressBar {
+  position: relative;
+  height: 28px;
+  background: var(--surface-2);
+  border-radius: 14px;
+  overflow: hidden;
+  margin-bottom: 12px;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.progressFill {
+  height: 100%;
+  background: linear-gradient(90deg, #4CAF50, #8BC34A);
+  border-radius: 14px;
+  width: 0%;
+  transition: width 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.progressFill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255,255,255,0.3),
+    transparent
+  );
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.progressPercent {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 14px;
+  font-weight: 900;
+  color: white;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  z-index: 10;
+  white-space: nowrap;
+}
+
+.progressStats {
+  display: flex;
+  gap: 8px;
+  justify-content: space-around;
+}
+
+.statItem {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px;
+  background: var(--card);
+  border-radius: 8px;
+  border: 1px solid var(--divider);
+}
+
+.statLabel {
+  font-size: 11px;
+  opacity: 0.7;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+
+.statValue {
+  font-size: 18px;
+  font-weight: 900;
+  color: var(--accent);
+}
+
+/* ===== CHAT FILTER TABS ===== */
+
+.tasksChatFilter {
+  display: flex;
+  gap: 8px;
+  padding: 8px 12px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--divider);
+}
+
+.tasksChatFilter::-webkit-scrollbar {
+  height: 4px;
+}
+
+.tasksChatFilter::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.tasksChatFilter::-webkit-scrollbar-thumb {
+  background: var(--accent);
+  border-radius: 2px;
+}
+
+.chatFilterBtn {
+  flex-shrink: 0;
+  padding: 8px 14px;
+  border: 1px solid var(--divider);
+  border-radius: 20px;
+  background: var(--card);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.chatFilterBtn:active {
+  transform: scale(0.95);
+}
+
+.chatFilterBtn.active {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+  box-shadow: 0 4px 12px rgba(53, 166, 211, 0.3);
+}
+
+.chatFilterScroll {
+  display: flex;
+  gap: 8px;
+  flex: 1;
+}
+
+.chatFilterItem {
+  flex-shrink: 0;
+  padding: 8px 12px;
+  border: 1px solid var(--divider);
+  border-radius: 20px;
+  background: var(--card);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.chatFilterItem:active {
+  transform: scale(0.95);
+}
+
+.chatFilterItem.active {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+
+/* ===== CONFETTI ANIMATION ===== */
+
+.confetti-container {
+  position: fixed;
+  top: -10px;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 9999;
+}
+
+.confetti {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  font-size: 16px;
+  animation: confettiFall 3s ease-in forwards;
+}
+
+@keyframes confettiFall {
+  to {
+    transform: translateY(100vh) rotateZ(360deg);
+    opacity: 0;
+  }
+}
+
+/* ===== TASK GROUPS & EXPANDED VIEW ===== */
+
+.taskGroup {
+  margin-bottom: 12px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--divider);
+  background: var(--card);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  animation: taskFadeIn 0.3s ease;
+}
+
+.taskGroupHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, var(--card), var(--surface-2));
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-bottom: 1px solid var(--divider);
+}
+
+.taskGroupHead:active {
+  background: var(--surface-2);
+  transform: scale(0.98);
+}
+
+.taskGroupTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.taskGroupIcon {
+  font-size: 18px;
+}
+
+.taskGroupName {
+  font-weight: 600;
+  color: var(--text);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.taskGroupProgress {
+  font-size: 12px;
+  opacity: 0.6;
+  color: var(--muted);
+  margin: 0 4px;
+  padding: 2px 6px;
+  background: var(--surface-2);
+  border-radius: 4px;
+}
+
+.taskGroupMeta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.metaPill {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.metaPill.level-easy {
+  background: rgba(76, 175, 80, 0.15);
+  color: #4CAF50;
+}
+
+.metaPill.level-medium {
+  background: rgba(255, 165, 0, 0.15);
+  color: #ffa654;
+}
+
+.metaPill.level-hard {
+  background: rgba(244, 67, 54, 0.15);
+  color: #ff6b6b;
+}
+
+.taskGroupChevron {
+  font-size: 12px;
+  color: var(--muted);
+  transition: transform 0.2s ease;
+}
+
+.taskGroup.open .taskGroupChevron {
+  transform: rotate(180deg);
+}
+
+.taskGroupBody {
+  padding: 12px 8px;
+  background: var(--surface-2);
+  display: none;
+  border-top: 1px solid var(--divider);
+}
+
+.taskGroup.open .taskGroupBody {
+  display: block;
+}
+
+.taskGroupProgressBar {
+  height: 6px;
+  background: var(--divider);
+  border-radius: 3px;
+  margin-bottom: 12px;
+  overflow: hidden;
+  position: relative;
+}
+
+.taskGroupProgressFill {
+  height: 100%;
+  background: linear-gradient(90deg, #4CAF50, #8BC34A);
+  transition: width 0.3s ease;
+  border-radius: 3px;
+}
+
+.taskGroupProgressText {
+  position: absolute;
+  top: -20px;
+  right: 0;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.taskRows {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.taskRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+}
+
+.taskRow:active {
+  background: var(--divider);
+  transform: scale(0.98);
+}
+
+.taskRow.done {
+  opacity: 0.6;
+}
+
+.taskRow.done .taskRowText {
+  text-decoration: line-through;
+  color: var(--muted);
+}
+
+.taskCheckbox {
+  display: none;
+}
+
+.taskRowLeft {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.taskRowIcon {
+  font-size: 16px;
+}
+
+.taskRowText {
+  flex: 1;
+  color: var(--text);
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.taskRowRight {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.miniMeta {
+  font-size: 9px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+/* ===== TASK GROUP STYLES ===== */
+
+.taskGroup {
+  background: var(--card);
+  border: 1px solid var(--divider);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+}
+
+.taskGroupHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  background: linear-gradient(135deg, var(--card), var(--surface-2));
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-bottom: 1px solid var(--divider);
+}
+
+.taskGroupHead:active {
+  background: var(--surface-2);
+  transform: scale(0.98);
+}
+
+.taskGroupHead.open {
+  border-bottom-color: var(--accent);
+}
+
+.taskGroupTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.taskGroupName {
+  font-weight: 600;
+  color: var(--text);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+}
+
+.taskGroupProgress {
+  font-size: 11px;
+  opacity: 0.6;
+  color: var(--muted);
+  margin: 0 4px;
+  padding: 2px 6px;
+  background: var(--surface-2);
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.taskGroupMeta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.metaPill {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.metaPill.level-easy {
+  background: rgba(76, 175, 80, 0.15);
+  color: #4CAF50;
+}
+
+.metaPill.level-medium {
+  background: rgba(255, 165, 0, 0.15);
+  color: #ffa654;
+}
+
+.metaPill.level-hard {
+  background: rgba(244, 67, 54, 0.15);
+  color: #ff6b6b;
+}
+
+.taskGroupChevron {
+  font-size: 12px;
+  color: var(--muted);
+  transition: transform 0.2s ease;
+  margin-left: 8px;
+}
+
+.taskGroupHead.open .taskGroupChevron {
+  transform: rotate(180deg);
+}
+
+.taskGroupBody {
+  padding: 0;
+  background: var(--surface-2);
+  display: none;
+  border-top: 1px solid var(--divider);
+  animation: taskFadeIn 0.2s ease;
+}
+
+.taskGroupBody.open {
+  display: block;
+}
+
+.taskGroupProgressBar {
+  height: 6px;
+  background: var(--divider);
+  border-radius: 3px;
+  margin: 10px 12px 0 12px;
+  overflow: hidden;
+  position: relative;
+}
+
+.taskGroupProgressFill {
+  height: 100%;
+  background: linear-gradient(90deg, #4CAF50, #8BC34A);
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 3px;
+}
+
+.taskRows {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 8px;
+}
+
+.taskRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+}
+
+.taskRow:active {
+  background: var(--divider);
+  transform: scale(0.98);
+}
+
+.taskRow.done {
+  opacity: 0.6;
+}
+
+.taskRow.done .taskRowText {
+  text-decoration: line-through;
+  color: var(--muted);
+}
+
+.taskRowLeft {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.taskRowLeft input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.taskRowText {
+  flex: 1;
+  color: var(--text);
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.taskRowRight {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.taskSubmitBar {
+  padding: 10px 12px;
+  margin: 8px 8px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--accent), #4CAF50);
+  color: white;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+  font-size: 14px;
+}
+
+.taskSubmitBar:active {
+  transform: scale(0.95);
+  opacity: 0.9;
+}
+
+.taskSubmitBar.done {
+  background: linear-gradient(135deg, #4CAF50, #8BC34A);
+  cursor: default;
+}
+
+.taskSubmitBar.done:active {
+  transform: none;
+}
+
+/* ===== TASKS HINT ===== */
+
+#tasksHint {
+  text-align: center;
+  color: var(--muted);
+  padding: 32px 16px;
+  font-size: 14px;
+}
+
+@keyframes taskFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
