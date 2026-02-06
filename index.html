@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <meta name="description" content="AI-powered time management and task planning assistant" />
   <meta name="theme-color" content="#5b8aa6" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -18,27 +18,20 @@
 </head>
 
 <body>
-  <!-- HEADER -->
   <header class="header">
     <button class="settings_bt" id="openDrawer" type="button" aria-label="Меню">
       <img src="img/menu-icon.svg" alt="" />
     </button>
 
-    
-
     <div class="buttons">
-
        <img src="img/tasks-app-svgrepo-com.svg" alt="">
       <button class="tab" id="navBtn" type="button">
-       
         <span>задачи</span>
       </button>
     </div>
   </header>
 
-  <!-- MAIN -->
   <main>
-    <!-- SCREEN: HOME -->
     <section class="screen active" id="screen-home">
       <div class="LSD">
         <h1>LSD | AI Time Manager</h1>
@@ -51,9 +44,7 @@
       <img src="img/messenger.png" alt="" class="chat-img" />
     </section>
 
-    <!-- SCREEN: TASKS -->
     <section class="screen" id="screen-tasks">
-      <!-- PROGRESS BAR WITH STATS -->
       <div class="tasksTopSection">
         <div class="pointsBar" id="pointsBar">
           <div class="pointsLeft">
@@ -65,7 +56,6 @@
           </div>
         </div>
 
-        <!-- PROGRESS BAR -->
         <div class="progressWidget" id="progressWidget">
           <div class="progressHeader">
             <h3>📊 Прогресс</h3>
@@ -92,15 +82,7 @@
         </div>
       </div>
 
-      <!-- CHAT FILTER TABS -->
-      <div class="tasksChatFilter">
-        <button class="chatFilterBtn active" data-chat-id="all" type="button">
-          📋 Все задачи
-        </button>
-        <div class="chatFilterScroll" id="chatFilterScroll"></div>
-      </div>
 
-      <!-- TASKS BOX -->
       <div class="tasksBox">
         <div class="tasksHeader">
           <h2 id="tasksTitle">Все задачи</h2>
@@ -112,7 +94,6 @@
       </div>
     </section>
 
-    <!-- SCREEN: CHAT -->
     <section class="screen" id="screen-chat">
       <div class="chatTop">
         <div class="chatTitle">LSD | AI Time Manager</div>
@@ -123,19 +104,17 @@
     </section>
   </main>
 
-  <!-- PLAN BUTTON (fixed area) -->
   <div class="plan">
     <button class="plan_bt" id="planBtn" type="button" hidden>Создать план</button>
   </div>
 
-  <!-- FOOTER -->
   <footer class="footer">
     <div class="poisk">
       <button class="plus" id="plusBtn" type="button" aria-label="Плюс">
         <img src="img/plus-svgrepo-com.svg" alt="" />
       </button>
 
-      <input id="prompt" type="text" placeholder="Спроси LSD..." />
+      <input id="prompt" type="text" placeholder="Спроси LSD..." autocomplete="off" />
 
       <button class="search_bt" id="sendBtn" type="button" aria-label="Отправить">
         <img src="img/search.svg" alt="" />
@@ -143,10 +122,8 @@
     </div>
   </footer>
 
-  <!-- DRAWER OVERLAY -->
   <div class="drawerOverlay" id="drawerOverlay"></div>
 
-  <!-- LEFT DRAWER -->
   <aside class="drawer" id="settingsDrawer" aria-hidden="true">
     <div class="tgDrawerTop">
       <div class="tgDrawerTopRow">
@@ -166,8 +143,6 @@
         <span class="tgMenuIcon">👤</span>
         <span class="tgMenuText">Мой профиль</span>
       </button>
-
- 
     </div>
 
     <div class="tgHistoryBlock">
@@ -180,7 +155,6 @@
     </div>
   </aside>
 
-  <!-- PROFILE MODAL -->
   <div class="profileOverlay" id="profileOverlay"></div>
 
   <section class="profileModal" id="profileModal" aria-hidden="true">
@@ -192,14 +166,10 @@
     <div class="profileAvatarWrap">
       <img id="profileAvatar" src="img/Avatar.svg" alt="avatar" />
       <div class="pass">
-        <h2>версия : Бесплатная</h2>
+        <h2>Версия: Бесплатная</h2>
         <button type="button" id="upgradeBtn">Обновить План</button>
       </div>
     </div>
-
-
-
-
 
     <div class="profileCard">
       <div class="field">
@@ -208,34 +178,22 @@
       </div>
 
       <div class="field">
-        <label>Возраст (для AI, можно менять)</label>
+        <label>Возраст</label>
         <input id="profileAge" type="number" min="0" max="120" placeholder="Например: 19" />
       </div>
 
       <div class="field">
-        <label>Псевдоним (для AI)</label>
-        <input id="profileNick" type="text" placeholder="Например: Симпапусик" />
+        <label>Псевдоним</label>
+        <input id="profileNick" type="text" placeholder="Например: Алекс" />
       </div>
 
       <div class="field">
-        <label>Информация о себе (для AI)</label>
-        <textarea id="profileBio" rows="3" placeholder="Коротко: кто ты, чем занимаешься, какие цели..."></textarea>
+        <label>О себе</label>
+        <textarea id="profileBio" rows="3" placeholder="Увлечения, цели..."></textarea>
       </div>
     </div>
   </section>
 
-  <!-- AI MODAL -->
-  <div class="aiOverlay" id="aiOverlay"></div>
-
-  <section class="aiModal" id="aiModal" aria-hidden="true">
-    <div class="aiModalHeader">
-      <h2>Ответ LSD</h2>
-      <button id="closeAi" type="button">✕</button>
-    </div>
-    <pre class="aiText" id="aiText"></pre>
-  </section>
-
-  <!-- PLAN MODAL -->
   <div class="planOverlay" id="planOverlay"></div>
 
   <section class="planModal" id="planModal" aria-hidden="true">
@@ -247,265 +205,105 @@
     <div class="planContent" id="planContent"></div>
   </section>
 
-  <!-- PLUS ATTACH MENU (Telegram-like) -->
-<div class="attach" id="attach" aria-hidden="true">
-  <div class="attach__panel" role="menu" aria-label="Вложения">
-    <!-- Фото -->
-    <label class="attach__item" role="menuitem">
-      <span class="attach__icon" aria-hidden="true">📷</span>
-      <span class="attach__text">Фото</span>
-      <input
-        id="pickPhoto"
-        class="attach__input"
-        type="file"
-        accept="image/*"
-      />
-    </label>
+  <div class="attach" id="attach" aria-hidden="true">
+    <div class="attach__panel" role="menu" aria-label="Вложения">
+      <label class="attach__item" role="menuitem">
+        <span class="attach__icon" aria-hidden="true">📷</span>
+        <span class="attach__text">Фото</span>
+        <input id="pickPhoto" class="attach__input" type="file" accept="image/*" />
+      </label>
 
-    <!-- Файл -->
-    <label class="attach__item" role="menuitem">
-      <span class="attach__icon" aria-hidden="true">📎</span>
-      <span class="attach__text">Файл</span>
-      <input id="pickFile" class="attach__input" type="file" />
-    </label>
+      <label class="attach__item" role="menuitem">
+        <span class="attach__icon" aria-hidden="true">📎</span>
+        <span class="attach__text">Файл</span>
+        <input id="pickFile" class="attach__input" type="file" />
+      </label>
+    </div>
   </div>
-</div>
 
+  <div id="screen-subscription" class="lsdPrem" aria-hidden="true">
+    <div class="lsdPrem__inner">
+      <header class="lsdPrem__top">
+        <button class="lsdPrem__back" id="subscriptionClose" type="button" aria-label="Назад">←</button>
 
-<!-- LSD Premium screen (standalone window like Telegram Premium) -->
-<div id="screen-subscription" class="lsdPrem" aria-hidden="true">
-  <div class="lsdPrem__inner">
-    <!-- TOP -->
-    <header class="lsdPrem__top">
-      <button class="lsdPrem__back" id="subscriptionClose" type="button" aria-label="Назад">←</button>
-
-      <div class="lsdPrem__hero">
-        <div class="lsdPrem__logo" aria-hidden="true">
-          <!-- star -->
-         <img src="img/telegrammpremium.svg" alt="">
-       
+        <div class="lsdPrem__hero">
+          <div class="lsdPrem__logo" aria-hidden="true">
+            <img src="img/telegrammpremium.svg" alt="Premium">
+          </div>
+          <h1 class="lsdPrem__title">LSD Premium</h1>
+          <p class="lsdPrem__subtitle">Больше свободы и удобства с подпиской.</p>
         </div>
+      </header>
 
-        <h1 class="lsdPrem__title">LSD Premium</h1>
-        <p class="lsdPrem__subtitle">
-          Больше свободы и удобства с подпиской LSD Premium.
-        </p>
-      </div>
-    </header>
+      <main class="lsdPrem__content">
+        <section class="lsdPrem__payCard" aria-label="Тарифы">
+          <label class="lsdPrem__payRow">
+            <input type="radio" name="lsd_plan" value="year" checked />
+            <span class="lsdPrem__radio"></span>
+            <div class="lsdPrem__payMid">
+              <div class="lsdPrem__payTitle">Ежегодно <span class="lsdPrem__badge">-37%</span></div>
+            </div>
+            <div class="lsdPrem__payRight">
+              <div class="lsdPrem__payPrice">1990 ⭐/год</div>
+            </div>
+          </label>
 
-    <!-- CONTENT -->
-    <main class="lsdPrem__content">
-      <!-- PRICING CARD -->
-      <section class="lsdPrem__payCard" aria-label="Тарифы">
-        <label class="lsdPrem__payRow">
-          <input type="radio" name="lsd_plan" value="year" checked />
-          <span class="lsdPrem__radio"></span>
+          <div class="lsdPrem__divider"></div>
 
-          <div class="lsdPrem__payMid">
-            <div class="lsdPrem__payTitle">
-              Ежегодно <span class="lsdPrem__badge">-37%</span>
+          <label class="lsdPrem__payRow">
+            <input type="radio" name="lsd_plan" value="month" />
+            <span class="lsdPrem__radio"></span>
+            <div class="lsdPrem__payMid">
+              <div class="lsdPrem__payTitle">Ежемесячно</div>
+            </div>
+            <div class="lsdPrem__payRight">
+              <div class="lsdPrem__payPrice">199 ⭐/мес</div>
+            </div>
+          </label>
+        </section>
+
+        <section class="lsdPrem__list" aria-label="Преимущества">
+          <div class="lsdPrem__item">
+            <div class="lsdPrem__ico" aria-hidden="true">📎</div>
+            <div class="lsdPrem__itemMid">
+              <div class="lsdPrem__itemTitle">Файлы и фото</div>
+              <div class="lsdPrem__itemText">Больше лимитов на загрузку</div>
             </div>
           </div>
-
-          <div class="lsdPrem__payRight">
-            <div class="lsdPrem__payPrice">1990 ⭐/год</div>
-          </div>
-        </label>
-
-        <div class="lsdPrem__divider"></div>
-
-        <label class="lsdPrem__payRow">
-          <input type="radio" name="lsd_plan" value="month" />
-          <span class="lsdPrem__radio"></span>
-
-          <div class="lsdPrem__payMid">
-            <div class="lsdPrem__payTitle">Ежемесячно</div>
-          </div>
-
-          <div class="lsdPrem__payRight">
-            <div class="lsdPrem__payPrice">199 ⭐/мес</div>
-          </div>
-        </label>
-      </section>
-
-      <!-- BENEFITS -->
-      <section class="lsdPrem__list" aria-label="Преимущества">
-
-        <div class="lsdPrem__item">
-          <div class="lsdPrem__ico" aria-hidden="true">📎</div>
-          <div class="lsdPrem__itemMid">
-            <div class="lsdPrem__itemTitle">Файлы и фото в чат</div>
-            <div class="lsdPrem__itemText">
-               вы можете скидывать больше файлов и фотографий в чат
+          <div class="lsdPrem__item">
+            <div class="lsdPrem__ico" aria-hidden="true">🧠</div>
+            <div class="lsdPrem__itemMid">
+              <div class="lsdPrem__itemTitle">Умная память</div>
+              <div class="lsdPrem__itemText">Улучшенный контекст диалога</div>
             </div>
           </div>
-         
-        </div>
-
-
-        <div class="lsdPrem__item">
-          <div class="lsdPrem__ico" aria-hidden="true">🧠</div>
-          <div class="lsdPrem__itemMid">
-            <div class="lsdPrem__itemTitle">Память и контекст</div>
-            <div class="lsdPrem__itemText">
-               улучшенная память и логика AI
+          <div class="lsdPrem__item">
+            <div class="lsdPrem__ico" aria-hidden="true">📋</div>
+            <div class="lsdPrem__itemMid">
+              <div class="lsdPrem__itemTitle">Генерация планов</div>
+              <div class="lsdPrem__itemText">Больше планов в день</div>
             </div>
           </div>
-          
-        </div>
+        </section>
 
-                <div class="lsdPrem__item">
-          <div class="lsdPrem__ico" aria-hidden="true">📋</div>
-          <div class="lsdPrem__itemMid">
-            <div class="lsdPrem__itemTitle">больше плаов</div>
-            <div class="lsdPrem__itemText">
-               вы получаете больше планов на день
-            </div>
-          </div>
-          
+        <div class="lsdPrem__ctaWrap">
+          <button id="lsdSubscribeBtn" class="lsdPrem__cta" type="button">
+            Подключить за <span id="lsdCtaPrice">1990 ⭐</span>
+          </button>
+          <div class="lsdPrem__hint">Отмена в любой момент.</div>
         </div>
-
-                        <div class="lsdPrem__item">
-          <div class="lsdPrem__ico" aria-hidden="true">🌎</div>
-          <div class="lsdPrem__itemMid">
-            <div class="lsdPrem__itemTitle">Скоро новые функции !</div>
-            <div class="lsdPrem__itemText">
-               map-maind , совместные чаты  
-            </div>
-          </div>
-          
-        </div>
-      </section>
-
-      <!-- CTA -->
-      <div class="lsdPrem__ctaWrap">
-        <button id="lsdSubscribeBtn" class="lsdPrem__cta" type="button">
-          Подключить за <span id="lsdCtaPrice">13 490 ₸</span> в год
-        </button>
-        <div class="lsdPrem__hint">Подписку можно отменить в любой момент.</div>
-      </div>
-    </main>
+      </main>
+    </div>
   </div>
-</div>
 
-
-  <script defer>
-    // Инициализация PWA и Service Worker
+  <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
-        navigator.serviceWorker
-          .register("/sw.js")
-          .then((reg) => {
-            console.log("[PWA] Service Worker registered:", reg);
-            
-            reg.addEventListener("updatefound", () => {
-              const newWorker = reg.installing;
-              newWorker.addEventListener("statechange", () => {
-                if (newWorker.state === "activated") {
-                  console.log("[PWA] New Service Worker available");
-                  // Показываем уведомление об обновлении
-                  const updateBanner = document.createElement("div");
-                  updateBanner.className = "updateBanner";
-                  updateBanner.innerHTML = `
-                    <p>Доступно обновление приложения</p>
-                    <button onclick="window.location.reload()">Обновить</button>
-                  `;
-                  document.body.appendChild(updateBanner);
-                }
-              });
-            });
-          })
-          .catch((err) => console.warn("[PWA] SW registration failed:", err));
+        navigator.serviceWorker.register("/sw.js").catch(console.warn);
       });
     }
-
-    // Обработка offline/online
-    window.addEventListener("online", () => {
-      const banner = document.querySelector(".offlineBanner");
-      if (banner) banner.remove();
-      console.log("[App] Online");
-    });
-
-    window.addEventListener("offline", () => {
-      const offline = document.createElement("div");
-      offline.className = "offlineBanner";
-      offline.innerHTML = `
-        <div class="offlineContent">
-          <span class="offlineIcon">📡</span>
-          <span class="offlineText">Вы в оффлайн режиме</span>
-        </div>
-      `;
-      document.body.insertBefore(offline, document.body.firstChild);
-      console.log("[App] Offline");
-    });
   </script>
 
-  <!-- Модульное приложение вместо монолитного JavaScript.js -->
-  <script type="module">
-    import { tgReady } from "./modules/utils.module.js";
-    import { initEnhancedUX } from "./modules/ux.module.js";
-    import { initGlobalErrorHandler } from "./modules/error.module.js";
-    
-    // Инициализация Telegram WebApp
-    tgReady();
-
-    // Инициализация обработки ошибок
-    initGlobalErrorHandler();
-
-    // Инициализация UX улучшений
-    initEnhancedUX();
-
-    console.log("[App] Initialized with modular architecture");
-  </script>
-
-  <!-- Лоадер старого кода (временно, пока мигрируем) -->
-  <script src="./JavaScript.js" defer></script>
-
-  <!-- Инициализация Progress & Tasks UI -->
-  <script type="module" defer>
-    import { updateProgressDisplay } from "./modules/progress.module.js";
-    import { initTasksUI, updateFiltersOnChatChange } from "./modules/taskui.module.js";
-    import { markTaskDone, clearAllTasks } from "./modules/tasks.module.js";
-
-    // Глобальные функции для совместимости
-    window.updateProgress = updateProgressDisplay;
-    window.updateTasksUI = () => {
-      const tasksList = document.getElementById("tasksList");
-      if (tasksList) {
-        // Используем существующий renderTasks из JavaScript.js
-        if (window.renderTasks) window.renderTasks();
-      }
-    };
-
-    // Инициализируем UI задач при загрузке
-    window.addEventListener("load", () => {
-      setTimeout(() => {
-        initTasksUI(
-          (groupId, itemIndex) => {
-            markTaskDone(groupId, itemIndex);
-            updateProgressDisplay();
-            window.updateTasksUI();
-          },
-          () => {
-            clearAllTasks();
-            updateProgressDisplay();
-            window.updateTasksUI();
-          }
-        );
-      }, 500);
-    });
-
-    // Обновляем прогресс каждый раз при изменении задач
-    window.addEventListener("tasks-updated", () => {
-      updateProgressDisplay();
-    });
-
-    // Обновляем фильтры при смене чата
-    window.addEventListener("chat-changed", () => {
-      updateFiltersOnChatChange();
-    });
-
-    console.log("[Task UI] Initialized");
-  </script>
+  <script src="JavaScript.js" defer></script>
 </body>
 </html>
