@@ -131,11 +131,14 @@ main,
 .aiOverlay,
 .aiModal,
 .planOverlay,
-.planModal,
-.plan{
+.planModal
+{
   position:relative;
   z-index:1;
 }
+
+
+
 
 /* ===============================
    LAYOUT
@@ -521,14 +524,15 @@ body.dark .chatTitle{
 .plan{
   width: 100%;
   position: fixed;
-  bottom: 8%;
+  bottom: 10%;
   display: flex;
   justify-content: center;
+  
   z-index: 70;
 }
 
 #planBtn{
-  height:56px;
+  height:40px;
   border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.425);
   background: rgba(0, 0, 0, 0.075);
@@ -2174,6 +2178,7 @@ main{
   overflow-y: auto;              /* ВОТ ОНО */
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
+  margin-top: -10px;
 }
 
 /* ===============================
