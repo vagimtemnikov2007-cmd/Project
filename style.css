@@ -472,7 +472,7 @@ body.dark .chatTitle{
   justify-content:center;
   align-items:flex-end;
   background: transparent;
-  z-index: 60;
+  z-index: 90;
 }
 
 .poisk{
@@ -2172,6 +2172,8 @@ main{
 
   overflow: hidden; /* базово можно */
 }
+
+
 
 .screen.active{
   display:flex;
